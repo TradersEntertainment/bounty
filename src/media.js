@@ -101,10 +101,10 @@ async function screenshotBountyPage(url, filename) {
     });
 
     const page = await context.newPage();
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
     // Wait for content to render
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(3500);
 
     // Try to find the main bounty card/content area for a focused screenshot
     const selectors = [
