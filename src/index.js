@@ -245,7 +245,7 @@ async function cmdDraft(flags) {
  * POST: Post the next draft tweet to Twitter/X.
  */
 async function cmdPost(flags) {
-  const maxDaily = parseInt(process.env.MAX_TWEETS_PER_DAY || '15', 10);
+  const maxDaily = parseInt(process.env.MAX_TWEETS_PER_DAY || '8', 10);
   const todayCount = getTodayTweetCount();
 
   if (todayCount >= maxDaily) {
@@ -425,7 +425,7 @@ async function cmdCron(flags) {
   const port = process.env.PORT || 3000;
   const server = startServer(port);
 
-  const cronExpr = process.env.SCAN_CRON || '*/30 * * * *';
+  const cronExpr = process.env.SCAN_CRON || '0 */3 * * *';
   log.info(`⏰ Starting cron scheduler: ${cronExpr}`);
   log.info('Press Ctrl+C to stop\n');
 

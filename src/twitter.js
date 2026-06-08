@@ -11,6 +11,11 @@ const log = createLogger('twitter');
 let client = null;
 let readWriteClient = null;
 
+// Cache for verifyCredentials to avoid repeated v2.me() calls ($$$)
+let credentialCache = null;
+let credentialCacheExpiry = 0;
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 /**
  * Initialize the Twitter API client with credentials from environment.
  */
@@ -203,10 +208,18 @@ export async function uploadMedia(media, mimeType = 'image/jpeg') {
 
 /**
  * Verify that the Twitter credentials are valid.
+ * Results are cached for 1 hour to minimize API calls.
  *
+ * @param {boolean} forceRefresh - Force a fresh API call ignoring cache
  * @returns {{ valid: boolean, username: string, error: string }}
  */
-export async function verifyCredentials() {
+export async function verifyCredentials(forceRefresh = false) {
+  // Return cached result if still valid
+  if (!forceRefresh && credentialCache && Date.now() < credentialCacheExpiry) {
+    log.debug(`Using cached credentials (@${credentialCache.username})`);
+    return credentialCache;
+  }
+
   const twitterClient = getTwitterClient();
 
   if (!twitterClient) {
@@ -220,14 +233,21 @@ export async function verifyCredentials() {
   try {
     const me = await twitterClient.v2.me();
     log.info(`Verified as @${me.data.username}`);
-    return {
+    const result = {
       valid: true,
       username: me.data.username,
       error: null,
     };
+    // Cache the successful result
+    credentialCache = result;
+    credentialCacheExpiry = Date.now() + CACHE_TTL_MS;
+    return result;
   } catch (error) {
     const errorMsg = formatTwitterError(error);
     log.error(`Credential verification failed: ${errorMsg}`);
+    // Clear cache on failure
+    credentialCache = null;
+    credentialCacheExpiry = 0;
     return {
       valid: false,
       username: null,
@@ -240,33 +260,18 @@ export async function verifyCredentials() {
  * Check rate limit status.
  */
 export async function checkRateLimit() {
-  const twitterClient = getTwitterClient();
-  if (!twitterClient) return null;
-
-  try {
-    // Twitter API v2 doesn't have a direct rate limit endpoint
-    // We'll check by making a lightweight call
-    const me = await twitterClient.v2.me();
-    return {
-      ok: true,
-      user: me.data.username,
-    };
-  } catch (error) {
-    if (error.code === 429) {
-      const resetAt = error.rateLimit?.reset
-        ? new Date(error.rateLimit.reset * 1000).toISOString()
-        : 'unknown';
-      return {
-        ok: false,
-        rateLimited: true,
-        resetAt,
-      };
-    }
+  // Use cached credentials instead of making a fresh API call
+  const cached = await verifyCredentials();
+  if (!cached || !cached.valid) {
     return {
       ok: false,
-      error: formatTwitterError(error),
+      error: cached?.error || 'Twitter client not initialized.',
     };
   }
+  return {
+    ok: true,
+    user: cached.username,
+  };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────

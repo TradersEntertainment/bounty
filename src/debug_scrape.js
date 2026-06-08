@@ -4,40 +4,56 @@ async function main() {
   console.log('Launching browser...');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-  
   console.log('Navigating to pump.fun/go/bounties...');
   await page.goto('https://pump.fun/go/bounties', { waitUntil: 'domcontentloaded' });
   
   console.log('Waiting 5 seconds for JS to execute...');
   await page.waitForTimeout(5000);
   
-  // Print page title
-  console.log('Page Title:', await page.title());
-  
-  // Let's inspect elements on the page
-  const html = await page.content();
-  console.log('HTML Length:', html.length);
-  
-  // Try to find Next.js data
-  const nextData = await page.evaluate(() => {
-    const el = document.querySelector('#__NEXT_DATA__');
-    return el ? el.textContent.slice(0, 1000) : 'Not found';
+  const articlesData = await page.evaluate(() => {
+    const articles = Array.from(document.querySelectorAll('article'));
+    return articles.map((art, idx) => {
+      const keys = Object.keys(art);
+      const reactPropKey = keys.find(k => k.startsWith('__reactProps') || k.startsWith('__reactFiber'));
+      let reactProps = null;
+      if (reactPropKey) {
+        // Safe serialization of nested properties
+        try {
+          const props = art[reactPropKey];
+          // Try to search properties recursively for any UUID
+          const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+          let foundUuid = null;
+          
+          function searchObj(obj, depth = 0) {
+            if (depth > 6 || !obj || typeof obj !== 'object') return;
+            for (const key of Object.keys(obj)) {
+              const val = obj[key];
+              if (typeof val === 'string' && uuidRegex.test(val)) {
+                foundUuid = val;
+                return;
+              }
+              if (val && typeof val === 'object') {
+                searchObj(val, depth + 1);
+                if (foundUuid) return;
+              }
+            }
+          }
+          searchObj(props);
+          reactProps = { foundUuid };
+        } catch (e) {
+          reactProps = { error: e.message };
+        }
+      }
+      
+      return {
+        index: idx,
+        text: art.textContent.slice(0, 50),
+        reactProps
+      };
+    });
   });
-  console.log('Next.js Data (first 1000 chars):', nextData);
   
-  // Find all cards
-  const cardsInfo = await page.evaluate(() => {
-    const cards = Array.from(document.querySelectorAll('article, [class*="card"], [class*="Card"]'));
-    return cards.map((c, i) => ({
-      index: i,
-      tagName: c.tagName,
-      className: c.className,
-      text: c.textContent.trim().slice(0, 200),
-      outerHTML: c.outerHTML.slice(0, 500)
-    })).slice(0, 5);
-  });
-  
-  console.log('Found Cards:', JSON.stringify(cardsInfo, null, 2));
+  console.log('Articles React Props Data:', JSON.stringify(articlesData, null, 2));
   
   await browser.close();
 }

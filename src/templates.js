@@ -7,278 +7,203 @@
 
 const TEMPLATES = {
   funny: [
-    (b) => `💀 Someone is really offering ${b.reward} SOL to "${b.title}"
+    (b) => `💀 someone is paying ${b.reward} SOL for:
 
-I love this timeline. Absolute degen energy.
+"${b.title}"
 
-Who's brave enough? 👀
+i love this timeline
 
-${b.url}
-#PumpFunGO #Solana #Bounty`,
+#PumpFunGO #Solana`,
 
     (b) => `bro what 😭😭😭
 
-"${b.title}" — ${b.reward} SOL bounty on @PumpFunGO
-
-the internet is undefeated ser
-
-${b.url}
-#PumpFunGO #Crypto #Bounty`,
-
-    (b) => `🚨 BOUNTY ALERT 🚨
-
-"${b.title}"
-
-Reward: ${b.reward} SOL 💰
-
-This is the most degen thing I've seen today and it's not even close 😂
-
-${b.url}
-#PumpFunGO #Solana`,
-
-    (b) => `anon really said: "${b.title}"
-
-and they're paying ${b.reward} SOL for it 💀
-
-i can't with this space sometimes lmaooo
-
-${b.url}
-#PumpFunGO #Bounty #Solana`,
-
-    (b) => `New bounty just dropped and I'm DECEASED 💀
-
 "${b.title}" — ${b.reward} SOL
 
-we are so early on @PumpFunGO frfr
+the internet remains undefeated
 
-${b.url}
-#PumpFunGO #Solana #Crypto`,
+#PumpFunGO #Solana`,
+
+    (b) => `"${b.title}"
+
+${b.reward} SOL. dead serious. 💀
+
+this is why i wake up every morning
+
+#PumpFunGO #Solana`,
+
+    (b) => `i need everyone to stop what they're doing rn
+
+someone just put up ${b.reward} SOL for:
+"${b.title}"
+
+😭😭😭
+
+#PumpFunGO #Solana`,
+
+    (b) => `the bounties keep getting crazier
+
+"${b.title}" — ${b.reward} SOL 💀
+
+who's doing it?
+
+#PumpFunGO #Solana`,
   ],
 
   big_bounty: [
-    (b) => `🐋 WHALE BOUNTY ALERT 🐋
+    (b) => `${b.reward} SOL bounty just dropped 🚨
 
 "${b.title}"
+
+that's real money. who wants it?
+
+#PumpFunGO #Solana`,
+
+    (b) => `somebody really put up ${b.reward} SOL for this:
+
+"${b.title}"
+
+massive bag sitting right there 💰
+
+#PumpFunGO #Solana`,
+
+    (b) => `"${b.title}"
 
 💰 ${b.reward} SOL reward
 
-This is not a drill. Someone is throwing BAGS at this. Who's taking it?
+this is not a joke. someone go claim this bag
 
-${b.url}
-#PumpFunGO #Solana #Bounty #Crypto`,
-
-    (b) => `👀 ${b.reward} SOL bounty just hit @PumpFunGO
-
-"${b.title}"
-
-That's real money ser. Absolute madlad territory.
-
-Are you built for this? 💪
-
-${b.url}
 #PumpFunGO #Solana`,
 
-    (b) => `💰💰💰 ${b.reward} SOL BOUNTY 💰💰💰
+    (b) => `${b.reward} SOL on the table 👀
 
 "${b.title}"
 
-Someone is making it RAIN on @PumpFunGO
+are you really gonna let someone else take this?
 
-This could be your bag anon 👀
+#PumpFunGO #Solana`,
 
-${b.url}
-#PumpFunGO #Solana #Crypto #Bounty`,
-
-    (b) => `ser... ${b.reward} SOL to "${b.title}"??
-
-I've seen people do worse for less 😂
-
-This is the degen economy we were promised. WAGMI 🚀
-
-${b.url}
-#PumpFunGO #Solana #Bounty`,
-
-    (b) => `New ATH for degen bounties 📈
+    (b) => `we don't talk enough about the bags on @PumpFunGO
 
 "${b.title}" — ${b.reward} SOL
 
-@PumpFunGO is literally printing opportunities
+someone go get this 🏃‍♂️
 
-who's claiming this bag? 💰
-
-${b.url}
 #PumpFunGO #Solana`,
   ],
 
   extreme: [
-    (b) => `⚠️ EXTREME BOUNTY ⚠️
+    (b) => `"${b.title}"
 
-"${b.title}"
+${b.reward} SOL if you actually do it
 
-Reward: ${b.reward} SOL
+who's unhinged enough? 🤯
 
-This is absolutely UNHINGED and I'm here for every second of it 🍿
-
-${b.url}
-#PumpFunGO #Solana #Bounty`,
-
-    (b) => `ok so someone really put up ${b.reward} SOL for:
-
-"${b.title}"
-
-absolute madlad energy on @PumpFunGO rn 🤯
-
-i need to see someone attempt this
-
-${b.url}
 #PumpFunGO #Solana`,
 
-    (b) => `🔥 CERTIFIED DEGEN BOUNTY 🔥
+    (b) => `this might be the most insane bounty i've ever seen
 
-"${b.title}" — ${b.reward} SOL
+"${b.title}" — ${b.reward} SOL 💀
 
-This has main character energy and I need content creators to deliver
+tag someone who'd actually do this
 
-${b.url}
-#PumpFunGO #Solana #Bounty #Crypto`,
-
-    (b) => `The absolute STATE of @PumpFunGO right now:
-
-"${b.title}"
-
-${b.reward} SOL if you actually do it 💀
-
-who's unhinged enough? tag someone
-
-${b.url}
 #PumpFunGO #Solana`,
 
-    (b) => `I'm sorry WHAT?? 😭
+    (b) => `${b.reward} SOL to "${b.title}"
+
+i— 😭
+
+@PumpFunGO is different
+
+#PumpFunGO #Solana`,
+
+    (b) => `"${b.title}"
+
+reward: ${b.reward} SOL
+
+this is absolutely unhinged and i'm here for it 🍿
+
+#PumpFunGO #Solana`,
+
+    (b) => `every day @PumpFunGO gets wilder
 
 "${b.title}" for ${b.reward} SOL
 
-@PumpFunGO continues to deliver the most chaotic content on Solana
+what timeline is this 💀
 
-${b.url}
-#PumpFunGO #Bounty #Solana`,
+#PumpFunGO #Solana`,
   ],
 
   completed: [
-    (b) => `✅ BOUNTY COMPLETED ✅
+    (b) => `someone actually did it ✅
 
-"${b.title}" — someone actually DID IT
+"${b.title}" — ${b.reward} SOL claimed
 
-They earned ${b.reward} SOL 💰
+absolute legend 🫡
 
-Absolute legend. This is why @PumpFunGO hits different 🫡
-
-${b.url}
 #PumpFunGO #Solana`,
 
-    (b) => `THE MADLAD ACTUALLY DID IT 😭🫡
+    (b) => `THE MADLAD DID IT 😭
 
-"${b.title}" — COMPLETED ✅
+"${b.title}" — COMPLETED
 
-${b.reward} SOL secured. Bag claimed.
+${b.reward} SOL secured 💰
 
-Never doubt a degen on a mission 💪
-
-${b.url}
-#PumpFunGO #Solana #Crypto`,
-
-    (b) => `another day, another bounty claimed 💰
-
-"${b.title}" — DONE ✅
-
-${b.reward} SOL paid out on @PumpFunGO
-
-ser really woke up and chose chaos 😂
-
-${b.url}
 #PumpFunGO #Solana`,
 
-    (b) => `🏆 WINNER WINNER 🏆
+    (b) => `bag claimed ✅
 
-Someone just claimed ${b.reward} SOL for:
-"${b.title}"
+"${b.title}" — ${b.reward} SOL paid out
 
-@PumpFunGO really out here changing lives one bounty at a time 🚀
+never doubt a degen on a mission
 
-${b.url}
-#PumpFunGO #Solana #Bounty`,
+#PumpFunGO #Solana`,
   ],
 
   easy_money: [
-    (b) => `💸 FREE MONEY ALERT 💸
+    (b) => `this one's basically free money:
 
 "${b.title}" — ${b.reward} SOL
 
-This is literally free money ser. What are you waiting for? 🏃‍♂️
+what are you waiting for? 🏃‍♂️
 
-${b.url}
-#PumpFunGO #Solana #Bounty`,
+#PumpFunGO #Solana`,
 
-    (b) => `if you're not checking @PumpFunGO bounties daily you're literally leaving SOL on the table
-
-"${b.title}" — ${b.reward} SOL
-
-this one's basically free anon 👀
-
-${b.url}
-#PumpFunGO #Solana #Crypto`,
-
-    (b) => `Easy ${b.reward} SOL on the table rn:
+    (b) => `easiest ${b.reward} SOL of your life:
 
 "${b.title}"
 
-Some of these @PumpFunGO bounties are genuinely just free money 🤷‍♂️
+go get that bread 🍞
 
-${b.url}
-#PumpFunGO #Solana #Bounty`,
+#PumpFunGO #Solana`,
 
-    (b) => `gm to everyone except people who ignore easy bounties 🌅
+    (b) => `if you're not checking @PumpFunGO you're leaving SOL on the table
 
-"${b.title}" — ${b.reward} SOL on @PumpFunGO
+"${b.title}" — ${b.reward} SOL
 
-go get that bread anon 🍞
+this is free money anon 👀
 
-${b.url}
 #PumpFunGO #Solana`,
   ],
 
   general: [
-    (b) => `New bounty on @PumpFunGO 👀
-
-"${b.title}"
-
-Reward: ${b.reward} SOL 💰
-
-${b.url}
-#PumpFunGO #Solana #Bounty`,
-
-    (b) => `Fresh bounty alert 🚨
+    (b) => `new bounty 👀
 
 "${b.title}" — ${b.reward} SOL
 
-Check it out on @PumpFunGO 🔥
-
-${b.url}
 #PumpFunGO #Solana`,
 
-    (b) => `another day, another @PumpFunGO bounty worth looking at 👀
+    (b) => `"${b.title}"
 
-"${b.title}" — ${b.reward} SOL
+${b.reward} SOL reward on @PumpFunGO
 
-${b.url}
-#PumpFunGO #Solana #Bounty #Crypto`,
+who's on it?
 
-    (b) => `${b.reward} SOL bounty live on @PumpFunGO:
+#PumpFunGO #Solana`,
+
+    (b) => `${b.reward} SOL bounty live rn:
 
 "${b.title}"
 
-who's on it? 🏃‍♂️💨
-
-${b.url}
 #PumpFunGO #Solana`,
   ],
 
