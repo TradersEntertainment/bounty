@@ -92,7 +92,7 @@ export function startServer(port = 3000) {
   });
 
   // Fallback to serving index.html for SPA routing
-  app.get('*', (req, res) => {
+  app.get('/*', (req, res) => {
     res.sendFile(resolve(PROJECT_ROOT, 'public', 'index.html'));
   });
 
