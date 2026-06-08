@@ -558,7 +558,7 @@ async function main() {
     const db = getDb();
     try {
       db.prepare('DELETE FROM scores').run();
-      db.prepare("DELETE FROM tweets WHERE status = 'draft'").run();
+      db.prepare("DELETE FROM tweets").run();
       log.info('✅ Database tables cleared. Ready to rescore.');
     } catch (err) {
       log.error(`Failed to execute FORCE_RESCORE: ${err.message}`);
