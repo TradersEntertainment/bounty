@@ -6,7 +6,7 @@
 const BLOCKED_CATEGORIES = {
   violence: [
     'kill', 'murder', 'assault', 'weapon', 'gun', 'knife', 'fight', 'attack',
-    'hurt', 'harm', 'shoot', 'stab', 'strangle', 'beat up', 'punch', 'bomb',
+    'hurt', 'harm', 'stab', 'strangle', 'beat up', 'punch', 'bomb',
     'explode', 'torture', 'execute', 'slaughter', 'massacre', 'bloodshed',
     'decapitate', 'dismember', 'maim',
   ],
@@ -34,6 +34,10 @@ const BLOCKED_CATEGORIES = {
   ],
   minors: [
     'child abuse', 'minor', 'underage', 'child exploit', 'grooming',
+  ],
+  gambling: [
+    'casino', 'betting', 'bet', 'slots', 'gamble', 'gambling', 'poker',
+    'blackjack', 'roulette', 'lottery', 'wager', 'fansbets', 'sportsbook',
   ],
 };
 
