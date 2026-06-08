@@ -387,10 +387,42 @@ async function extractFromDOM(page, baseUrl) {
         const descEl = card.querySelector('p, [class*="desc"], [class*="Desc"], [class*="body"], [class*="Body"], [class*="content"]');
         const description = descEl?.textContent?.trim() || '';
 
-        // Extract reward amount (look for SOL amounts)
-        const allText = card.textContent || '';
-        const solMatch = allText.match(/([\d,.]+)\s*SOL/i);
-        const rewardAmount = solMatch ? parseFloat(solMatch[1].replace(/,/g, '')) : 0;
+        // Extract reward amount (look for SOL amounts while filtering out bonding curve / market cap)
+        let rewardAmount = 0;
+        const rewardEl = card.querySelector('[class*="reward"], [class*="prize"], [class*="amount"], [class*="payout"], [class*="pool"]');
+        if (rewardEl) {
+          const match = rewardEl.textContent.match(/([\d,.]+)\s*SOL/i);
+          if (match) rewardAmount = parseFloat(match[1].replace(/,/g, ''));
+        }
+
+        if (rewardAmount === 0) {
+          const elements = Array.from(card.querySelectorAll('*'));
+          for (const el of elements) {
+            const text = el.textContent || '';
+            if (text.includes('SOL') && !text.match(/(?:volume|market|cap|mcap|progress|bonding|created|supply)/i)) {
+              const match = text.match(/([\d,.]+)\s*SOL/i);
+              if (match) {
+                const val = parseFloat(match[1].replace(/,/g, ''));
+                if (val > 0 && val < 500) {
+                  rewardAmount = val;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        if (rewardAmount === 0) {
+          const allText = card.textContent || '';
+          const matches = allText.matchAll(/([\d,.]+)\s*SOL/gi);
+          for (const match of matches) {
+            const val = parseFloat(match[1].replace(/,/g, ''));
+            if (val > 0 && val < 500) {
+              rewardAmount = val;
+              break;
+            }
+          }
+        }
 
         // Extract creator/username
         const creatorEl = card.querySelector('[class*="creator"], [class*="Creator"], [class*="user"], [class*="User"], [class*="author"], [class*="Author"]');
