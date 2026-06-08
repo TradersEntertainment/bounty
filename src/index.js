@@ -330,7 +330,7 @@ async function cmdPost(flags) {
       // Post bounty link as final reply
       if (allSuccess && bountyLink) {
         await sleep(1000);
-        const linkReply = `🔗 link aşağıda\n\n${bountyLink}`;
+        const linkReply = `🔗 Link & details 👇\n\n${bountyLink}`;
         await postTweet(linkReply, { replyToId: lastTweetId });
         log.info(`🔗 Link reply posted under thread`);
       }
@@ -353,7 +353,7 @@ async function cmdPost(flags) {
         // Post bounty link as a reply to the main tweet
         if (bountyLink) {
           await sleep(1500);
-          const linkReply = `🔗 link aşağıda\n\n${bountyLink}`;
+          const linkReply = `🔗 Link & details 👇\n\n${bountyLink}`;
           const replyResult = await postTweet(linkReply, { replyToId: result.tweetId });
           if (replyResult.success) {
             log.info(`🔗 Link reply posted: ${replyResult.tweetId}`);
