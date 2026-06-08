@@ -70,7 +70,7 @@ export async function scrapeBounties(options = {}) {
     const page = await context.newPage();
 
     log.info(`Navigating to ${config.bountiesUrl}`);
-    await page.goto(config.bountiesUrl, { waitUntil: 'networkidle', timeout: config.timeout });
+    await page.goto(config.bountiesUrl, { waitUntil: 'domcontentloaded', timeout: config.timeout });
 
     // Wait for the page content to render
     await waitForContent(page);
@@ -108,7 +108,7 @@ export async function scrapeSubmissions(options = {}) {
     const page = await context.newPage();
 
     log.info(`Navigating to ${config.submissionsUrl}`);
-    await page.goto(config.submissionsUrl, { waitUntil: 'networkidle', timeout: config.timeout });
+    await page.goto(config.submissionsUrl, { waitUntil: 'domcontentloaded', timeout: config.timeout });
 
     await waitForContent(page);
     await autoScroll(page, config.maxScrolls, config.scrollDelay);
@@ -140,7 +140,7 @@ export async function scrapeAll(options = {}) {
     // Scrape bounties
     const bountiesPage = await context.newPage();
     log.info(`Navigating to ${config.bountiesUrl}`);
-    await bountiesPage.goto(config.bountiesUrl, { waitUntil: 'networkidle', timeout: config.timeout });
+    await bountiesPage.goto(config.bountiesUrl, { waitUntil: 'domcontentloaded', timeout: config.timeout });
     await waitForContent(bountiesPage);
     await autoScroll(bountiesPage, config.maxScrolls, config.scrollDelay);
     const bounties = await extractBounties(bountiesPage, config.bountiesUrl);
@@ -149,7 +149,7 @@ export async function scrapeAll(options = {}) {
     // Scrape submissions
     const submissionsPage = await context.newPage();
     log.info(`Navigating to ${config.submissionsUrl}`);
-    await submissionsPage.goto(config.submissionsUrl, { waitUntil: 'networkidle', timeout: config.timeout });
+    await submissionsPage.goto(config.submissionsUrl, { waitUntil: 'domcontentloaded', timeout: config.timeout });
     await waitForContent(submissionsPage);
     await autoScroll(submissionsPage, config.maxScrolls, config.scrollDelay);
     const submissions = await extractSubmissions(submissionsPage, config.submissionsUrl);
