@@ -10,7 +10,7 @@ const log = createLogger('llm');
 /**
  * Helper to call Groq Chat Completion API.
  */
-async function callGroqAPI(messages, responseFormat = null) {
+async function callGroqAPI(messages, responseFormat = null, attempt = 1) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return null;
@@ -19,6 +19,9 @@ async function callGroqAPI(messages, responseFormat = null) {
   const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
   try {
+    // Add a 2-second delay between requests to stay under free tier rate limits
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const body = {
       model,
       messages,
@@ -39,6 +42,15 @@ async function callGroqAPI(messages, responseFormat = null) {
     });
 
     const data = await response.json();
+
+    if (response.status === 429) {
+      const retryAfter = 3000;
+      log.warn(`Rate limited (429). Attempt ${attempt}/3. Waiting ${retryAfter}ms before retry...`);
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        return callGroqAPI(messages, responseFormat, attempt + 1);
+      }
+    }
 
     if (!response.ok || data.error) {
       const errorMsg = data.error?.message || `HTTP ${response.status}`;
