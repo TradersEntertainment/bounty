@@ -259,31 +259,33 @@ async function cmdPost(flags) {
     // Handle threads
     if (draft.tweet_type === 'thread') {
       const threadParts = draft.tweet_text.split('\n---THREAD_SEPARATOR---\n');
+      
+      // Send to Telegram as a unified post (Independent of Twitter)
+      const telegramText = threadParts.join('\n\n');
+      await sendTelegramMessage(telegramText);
+
       const result = await postThread(threadParts);
 
       if (result.success) {
         markTweetPosted(draft.id, result.tweetIds[0]);
         log.info(`✅ Thread posted! First tweet ID: ${result.tweetIds[0]}`);
         posted++;
-
-        // Send to Telegram as a unified post
-        const telegramText = threadParts.join('\n\n');
-        await sendTelegramMessage(telegramText);
       } else {
         markTweetFailed(draft.id, result.error);
         log.error(`❌ Thread posting failed: ${result.error}`);
       }
     } else {
       // Single tweet
+      
+      // Send to Telegram (Independent of Twitter)
+      await sendTelegramMessage(draft.tweet_text);
+
       const result = await postTweet(draft.tweet_text);
 
       if (result.success) {
         markTweetPosted(draft.id, result.tweetId);
         log.info(`✅ Tweet posted! ID: ${result.tweetId}`);
         posted++;
-
-        // Send to Telegram
-        await sendTelegramMessage(draft.tweet_text);
       } else {
         markTweetFailed(draft.id, result.error);
         log.error(`❌ Tweet posting failed: ${result.error}`);
@@ -342,14 +344,14 @@ async function cmdRecap(flags) {
     return { posted: false, text };
   }
 
+  // Send to Telegram (Independent of Twitter)
+  await sendTelegramMessage(text);
+
   const result = await postTweet(text);
   if (result.success) {
     saveTweetDraft(null, text, templateUsed);
     markTweetPosted(result.tweetId, result.tweetId);
     log.info(`✅ Daily recap posted! ID: ${result.tweetId}`);
-
-    // Send to Telegram
-    await sendTelegramMessage(text);
   } else {
     log.error(`❌ Recap posting failed: ${result.error}`);
   }
