@@ -548,6 +548,19 @@ async function main() {
   // Initialize database
   initDatabase();
 
+  // Handle FORCE_RESCORE environment variable to clear and recalculate
+  if (process.env.FORCE_RESCORE === 'true') {
+    log.info('🔄 FORCE_RESCORE is enabled. Clearing existing scores & drafts to recalculate with LLM...');
+    const db = getDb();
+    try {
+      db.prepare('DELETE FROM scores').run();
+      db.prepare("DELETE FROM tweets WHERE status = 'draft'").run();
+      log.info('✅ Database tables cleared. Ready to rescore.');
+    } catch (err) {
+      log.error(`Failed to execute FORCE_RESCORE: ${err.message}`);
+    }
+  }
+
   // Initialize Twitter client (for commands that need it)
   if (['post', 'auto', 'cron', 'recap', 'verify'].includes(command)) {
     initTwitterClient();
