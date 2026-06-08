@@ -265,6 +265,12 @@ async function cmdPost(flags) {
   let posted = 0;
 
   for (const draft of drafts) {
+    const currentTodayCount = getTodayTweetCount();
+    if (currentTodayCount >= maxDaily) {
+      log.warn(`📛 Daily tweet limit reached during posting loop (${currentTodayCount}/${maxDaily}). Stopping.`);
+      break;
+    }
+
     log.info(`\n📤 Posting tweet for: ${draft.bounty_title || 'Unknown'}`);
     console.log(`\n${'─'.repeat(50)}`);
     console.log(draft.tweet_text.split('---THREAD_SEPARATOR---')[0]);
@@ -461,7 +467,10 @@ async function cmdAuto(flags) {
 
   let postResult = { posted: 0 };
   if (shouldPost) {
-    postResult = await cmdPost(flags);
+    // When running automatically in the pipeline, post only 1 tweet per run
+    // to distribute posts evenly across cron schedules
+    const postFlags = { ...flags, limit: 1 };
+    postResult = await cmdPost(postFlags);
   } else {
     log.info('📝 Draft mode — tweets saved but not posted. Use --auto to post.');
     const drafts = getDraftTweets(5);
