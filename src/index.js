@@ -117,7 +117,11 @@ async function cmdScore(flags) {
   log.info(`Found ${unscored.length} unscored bounties`);
 
   let scored = 0;
-  for (const bounty of unscored) {
+  const limit = flags.limit || 30; // Limit to prevent long wait times and rate limit issues
+  const chunk = unscored.slice(0, limit);
+  log.info(`Scoring next chunk of ${chunk.length} bounties...`);
+
+  for (const bounty of chunk) {
     const scores = await scoreBounty(bounty);
     upsertScore(bounty.id, scores);
 
