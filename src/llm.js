@@ -10,17 +10,36 @@ const log = createLogger('llm');
 /**
  * Helper to call Groq Chat Completion API.
  */
+let currentKeyIndex = 0;
+
+function getApiKey() {
+  const keysStr = process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY;
+  if (!keysStr) return null;
+  
+  const keys = keysStr.split(',').map(k => k.trim()).filter(Boolean);
+  if (keys.length === 0) return null;
+  
+  const idx = currentKeyIndex % keys.length;
+  return { key: keys[idx], totalKeys: keys.length };
+}
+
+function rotateApiKey() {
+  currentKeyIndex++;
+}
+
 async function callGroqAPI(messages, responseFormat = null, attempt = 1) {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
+  const keyInfo = getApiKey();
+  if (!keyInfo) {
     return null;
   }
 
+  const apiKey = keyInfo.key;
   const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
   try {
-    // Add a 2-second delay between requests to stay under free tier rate limits
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Add a smaller delay if we have multiple keys to distribute load, otherwise 2s
+    const delay = keyInfo.totalKeys > 1 ? 500 : 2000;
+    await new Promise(resolve => setTimeout(resolve, delay));
 
     const body = {
       model,
@@ -44,11 +63,22 @@ async function callGroqAPI(messages, responseFormat = null, attempt = 1) {
     const data = await response.json();
 
     if (response.status === 429) {
-      const retryAfter = 3000;
-      log.warn(`Rate limited (429). Attempt ${attempt}/3. Waiting ${retryAfter}ms before retry...`);
-      if (attempt < 3) {
-        await new Promise(resolve => setTimeout(resolve, retryAfter));
-        return callGroqAPI(messages, responseFormat, attempt + 1);
+      log.warn(`Groq API Key index ${currentKeyIndex % keyInfo.totalKeys} rate limited (429).`);
+      
+      if (keyInfo.totalKeys > 1) {
+        log.info('🔄 Rotating to the next Groq API key...');
+        rotateApiKey();
+        // Retry immediately with the next key, up to the number of available keys
+        if (attempt < keyInfo.totalKeys) {
+          return callGroqAPI(messages, responseFormat, attempt + 1);
+        }
+      } else {
+        const retryAfter = 3000;
+        log.warn(`Attempt ${attempt}/3. Waiting ${retryAfter}ms before retry...`);
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, retryAfter));
+          return callGroqAPI(messages, responseFormat, attempt + 1);
+        }
       }
     }
 

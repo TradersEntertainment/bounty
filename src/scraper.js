@@ -377,6 +377,7 @@ async function extractFromDOM(page, baseUrl) {
       return results;
 
       function extractBountyFromCard(card, baseUrl) {
+        const allText = card.textContent || '';
         // Extract title: look for headings or prominent text
         const titleEl = card.querySelector('h1, h2, h3, h4, [class*="title"], [class*="Title"], [class*="name"], [class*="Name"]');
         const title = titleEl?.textContent?.trim() || '';
