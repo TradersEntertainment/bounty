@@ -157,13 +157,20 @@ Return ONLY a raw JSON object with this structure:
  * @returns {Promise<{ text: string, type: 'single'|'thread' }|null>}
  */
 export async function generateTweetWithLLM(bounty, scores) {
+  const rewardSol = bounty.reward_amount || bounty.rewardAmount || 0;
+  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
+  let rewardText = `${rewardSol} SOL`;
+  if (rewardUsd > 0) {
+    rewardText = `${rewardSol} SOL (~$${Math.round(rewardUsd).toLocaleString()})`;
+  }
+
   const prompt = `You are a professional degen copywriter running @BountyFeedHQ.
 Your job is to write an engaging, hilarious, and viral tweet about a real-world task/bounty on pump.fun GO.
 
 Bounty details:
 Title: "${bounty.title}"
 Description: "${bounty.description || 'No description.'}"
-Reward: ${bounty.reward_amount || bounty.rewardAmount || 0} SOL
+Reward: ${rewardText}
 Url: ${bounty.source_url || 'https://pump.fun/go/bounties'}
 
 Curation Scores:
@@ -173,7 +180,7 @@ Curation Scores:
 
 Instructions:
 1. Write in a funny, slightly sarcastic, and engaging crypto/degen culture tone (use lowercase, degen slang like "anon", "ser", "gm", emojis like 💀, 😂, 👀, 🚨).
-2. Highlight why this is hilarious, absurd, or a massive bag (huge SOL reward).
+2. Highlight why this is hilarious, absurd, or a massive bag. Always use the formatted reward amount exactly as provided above (including the USD value in parentheses, e.g. "X SOL (~$Y)") when mentioning the reward.
 3. If the viral score is very high (>= 80), you can write a short 2-3 tweet thread. Otherwise, write a single tweet.
 4. Keep the single tweet or individual thread parts under 280 characters.
 5. Always include the bounty URL (${bounty.source_url || 'https://pump.fun/go/bounties'}).

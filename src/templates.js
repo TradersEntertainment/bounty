@@ -286,7 +286,7 @@ ${b.url}
     (data) => `📊 BountyFeedHQ Daily Recap 📊
 
 🔥 ${data.totalBounties} new bounties today
-💰 Biggest reward: ${data.biggestReward} SOL
+💰 Biggest reward: ${data.biggestReward}
 🤪 Most absurd: "${data.mostAbsurd}"
 📈 Avg viral score: ${data.avgScore}/100
 
@@ -297,7 +297,7 @@ ${b.url}
     (data) => `gm degens ☀️ here's your daily @PumpFunGO roundup:
 
 📌 ${data.totalBounties} bounties tracked
-💰 Top reward: ${data.biggestReward} SOL
+💰 Top reward: ${data.biggestReward}
 🏆 Most viral: "${data.mostAbsurd}"
 
 another day in the degen economy 📈
@@ -326,55 +326,78 @@ export function generateTweet(bounty, category = 'general') {
   const templates = TEMPLATES[category] || TEMPLATES.general;
   const template = pickRandom(templates);
   const templateIndex = templates.indexOf(template);
+ 
+  const rewardSol = bounty.reward_amount || bounty.rewardAmount || 0;
+  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
+  let rewardText = formatReward(rewardSol);
+  if (rewardUsd > 0) {
+    rewardText = `${rewardText} (~$${Math.round(rewardUsd).toLocaleString()})`;
+  }
 
   // Build template data
   const data = {
     title: truncateTitle(bounty.title || 'Untitled Bounty', 80),
-    reward: formatReward(bounty.reward_amount || bounty.rewardAmount || 0),
+    reward: rewardText,
     creator: bounty.creator || 'anon',
     submissions: bounty.submission_count || bounty.submissionCount || 0,
     url: bounty.source_url || bounty.sourceUrl || 'https://pump.fun/go/bounties',
     deadline: bounty.deadline || '',
   };
-
+ 
   const text = template(data);
-
+ 
   // Ensure tweet is within 280 character limit
   const finalText = enforceCharLimit(text);
-
+ 
   return {
     text: finalText,
     templateUsed: `${category}_${templateIndex}`,
   };
 }
-
+ 
 /**
  * Generate a daily recap tweet.
  */
 export function generateRecapTweet(recapData) {
   const templates = TEMPLATES.daily_recap;
   const template = pickRandom(templates);
+ 
+  const rewardSol = recapData.biggestReward || 0;
+  const rewardUsd = recapData.biggestRewardUsd || 0;
+  let rewardText = formatReward(rewardSol);
+  if (rewardUsd > 0) {
+    rewardText = `${rewardText} SOL (~$${Math.round(rewardUsd).toLocaleString()})`;
+  } else {
+    rewardText = `${rewardText} SOL`;
+  }
 
   const data = {
     totalBounties: recapData.totalBounties || 0,
-    biggestReward: formatReward(recapData.biggestReward || 0),
+    biggestReward: rewardText,
     mostAbsurd: truncateTitle(recapData.mostAbsurd || 'N/A', 50),
     avgScore: Math.round(recapData.avgScore || 0),
   };
-
+ 
   return {
     text: enforceCharLimit(template(data)),
     templateUsed: 'daily_recap',
   };
 }
-
+ 
 /**
  * Generate a thread (multiple tweets) for a particularly viral bounty.
  */
 export function generateThread(bounty, scores) {
+  const rewardSol = bounty.reward_amount || bounty.rewardAmount || 0;
+  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
+  let rewardText = formatReward(rewardSol);
+  if (rewardUsd > 0) {
+    rewardText = `${rewardText} (~$${Math.round(rewardUsd).toLocaleString()})`;
+  }
+
   const data = {
     title: truncateTitle(bounty.title || 'Untitled Bounty', 80),
-    reward: formatReward(bounty.reward_amount || bounty.rewardAmount || 0),
+    reward: rewardText,
     url: bounty.source_url || bounty.sourceUrl || 'https://pump.fun/go/bounties',
   };
 

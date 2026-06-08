@@ -48,6 +48,7 @@ function createTables() {
       description TEXT,
       reward_amount REAL DEFAULT 0,
       reward_currency TEXT DEFAULT 'SOL',
+      reward_usd REAL DEFAULT 0,
       creator TEXT,
       creator_avatar TEXT,
       deadline TEXT,
@@ -118,6 +119,13 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_tweets_status ON tweets(status);
     CREATE INDEX IF NOT EXISTS idx_tweets_date ON tweets(created_at);
   `);
+
+  // Retroactively add reward_usd if it doesn't exist
+  try {
+    db.prepare('ALTER TABLE bounties ADD COLUMN reward_usd REAL DEFAULT 0').run();
+  } catch (err) {
+    // Column already exists, ignore
+  }
 }
 
 // ─── Bounty Operations ──────────────────────────────────────────────
@@ -127,16 +135,17 @@ function createTables() {
  */
 export function upsertBounty(bounty) {
   const stmt = db.prepare(`
-    INSERT INTO bounties (id, title, description, reward_amount, reward_currency,
+    INSERT INTO bounties (id, title, description, reward_amount, reward_currency, reward_usd,
       creator, creator_avatar, deadline, status, submission_count, category, tags,
       image_url, source_url, scraped_at, raw_data)
-    VALUES (@id, @title, @description, @reward_amount, @reward_currency,
+    VALUES (@id, @title, @description, @reward_amount, @reward_currency, @reward_usd,
       @creator, @creator_avatar, @deadline, @status, @submission_count, @category, @tags,
       @image_url, @source_url, @scraped_at, @raw_data)
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
       description = excluded.description,
       reward_amount = excluded.reward_amount,
+      reward_usd = excluded.reward_usd,
       status = excluded.status,
       submission_count = excluded.submission_count,
       updated_at = excluded.scraped_at,
@@ -150,6 +159,7 @@ export function upsertBounty(bounty) {
     description: bounty.description || '',
     reward_amount: bounty.rewardAmount || 0,
     reward_currency: bounty.rewardCurrency || 'SOL',
+    reward_usd: bounty.rewardUsd || 0,
     creator: bounty.creator || '',
     creator_avatar: bounty.creatorAvatar || '',
     deadline: bounty.deadline || '',

@@ -452,9 +452,60 @@ async function extractFromDOM(page, baseUrl) {
         const imageEl = card.querySelector('img:not([class*="avatar"]):not([class*="Avatar"]):not([class*="profile"]):not([class*="icon"])');
         const imageUrl = imageEl?.src || '';
 
-        // Extract link
-        const linkEl = card.querySelector('a[href]');
-        const sourceUrl = linkEl ? new URL(linkEl.href, baseUrl).href : baseUrl;
+        // Extract link: prefer finding the bounty UUID in React internal properties, then outerHTML, then fallbacks
+        let sourceUrl = '';
+        try {
+          const keys = Object.keys(card);
+          const reactKey = keys.find(k => k.startsWith('__reactProps') || k.startsWith('__reactFiber'));
+          if (reactKey) {
+            const props = card[reactKey];
+            const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+            let foundUuid = '';
+            
+            function searchObj(obj, depth = 0) {
+              if (depth > 6 || !obj || typeof obj !== 'object') return;
+              for (const k of Object.keys(obj)) {
+                const val = obj[k];
+                if (typeof val === 'string') {
+                  const m = val.match(uuidRegex);
+                  if (m) {
+                    foundUuid = m[0];
+                    return;
+                  }
+                }
+                if (val && typeof val === 'object') {
+                  searchObj(val, depth + 1);
+                  if (foundUuid) return;
+                }
+              }
+            }
+            
+            searchObj(props);
+            if (foundUuid) {
+              sourceUrl = `https://pump.fun/go/${foundUuid}`;
+            }
+          }
+        } catch (e) {
+          // ignore React inspection error
+        }
+
+        if (!sourceUrl) {
+          const uuidMatch = card.outerHTML.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+          if (uuidMatch) {
+            sourceUrl = `https://pump.fun/go/${uuidMatch[1]}`;
+          } else {
+            const links = Array.from(card.querySelectorAll('a[href]'));
+            if (links.length > 0) {
+              const firstHref = links[0].getAttribute('href') || '';
+              if (firstHref.includes('/go/')) {
+                sourceUrl = new URL(firstHref, baseUrl).href;
+              } else {
+                sourceUrl = new URL(links[0].href, baseUrl).href;
+              }
+            }
+          }
+        }
+        if (!sourceUrl) sourceUrl = baseUrl;
 
         return {
           title,
@@ -594,6 +645,20 @@ async function extractSubmissions(page, baseUrl) {
  * Normalize bounty data from various sources into a consistent format.
  */
 function normalizeBounty(raw, baseUrl) {
+  const id = raw.id || raw._id || '';
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let sourceUrl = raw.sourceUrl || raw.url || raw.link || '';
+
+  if (id && uuidRegex.test(id)) {
+    sourceUrl = `https://pump.fun/go/${id}`;
+  } else {
+    const match = sourceUrl.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (match) {
+      sourceUrl = `https://pump.fun/go/${match[1]}`;
+    }
+  }
+  if (!sourceUrl) sourceUrl = baseUrl;
+
   const bounty = {
     title: raw.title || raw.name || '',
     description: raw.description || raw.body || raw.content || '',
@@ -607,11 +672,11 @@ function normalizeBounty(raw, baseUrl) {
     category: raw.category || raw.type || '',
     tags: raw.tags || [],
     imageUrl: raw.imageUrl || raw.image || raw.thumbnail || raw.media || '',
-    sourceUrl: raw.sourceUrl || raw.url || raw.link || baseUrl,
+    sourceUrl,
     rawData: raw,
   };
 
-  bounty.id = raw.id || raw._id || generateBountyId(bounty);
+  bounty.id = id || generateBountyId(bounty);
   return bounty;
 }
 

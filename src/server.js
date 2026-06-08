@@ -71,7 +71,7 @@ export function startServer(port = 3000) {
       
       // Get recent bounties with their scores and tweet posting status
       const bounties = db.prepare(`
-        SELECT b.id, b.title, b.description, b.reward_amount, b.reward_currency,
+        SELECT b.id, b.title, b.description, b.reward_amount, b.reward_currency, b.reward_usd,
                b.creator, b.creator_avatar, b.deadline, b.status as bounty_status,
                b.submission_count, b.category, b.source_url, b.scraped_at,
                s.viral_score, s.absurdity_score, s.reward_score, s.doability_score, 

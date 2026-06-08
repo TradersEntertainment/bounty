@@ -79,6 +79,20 @@ async function cmdScan(flags) {
 
   const { bounties, submissions } = await scrapeAll();
 
+  // Fetch SOL price to calculate USD values
+  let solPrice = 150; // default fallback
+  try {
+    const res = await fetch('https://api.coinbase.com/v2/prices/SOL-USD/spot');
+    const data = await res.json();
+    const price = parseFloat(data?.data?.amount);
+    if (!isNaN(price) && price > 0) {
+      solPrice = price;
+      log.info(`Fetched current SOL price from Coinbase: $${solPrice}`);
+    }
+  } catch (err) {
+    log.warn(`Failed to fetch SOL price, using fallback $${solPrice}: ${err.message}`);
+  }
+
   let newCount = 0;
   let filteredCount = 0;
 
@@ -90,6 +104,9 @@ async function cmdScan(flags) {
       filteredCount++;
       continue;
     }
+
+    // Assign calculated USD amount
+    bounty.rewardUsd = (bounty.rewardAmount || 0) * solPrice;
 
     upsertBounty(bounty);
     newCount++;
@@ -320,19 +337,28 @@ async function cmdRecap(flags) {
     return { posted: false };
   }
 
-  const biggestReward = recentBounties.reduce((max, b) => Math.max(max, b.reward_amount || 0), 0);
+  let biggestBounty = null;
+  for (const b of recentBounties) {
+    if (!biggestBounty || (b.reward_amount || 0) > (biggestBounty.reward_amount || 0)) {
+      biggestBounty = b;
+    }
+  }
+  const biggestReward = biggestBounty ? (biggestBounty.reward_amount || 0) : 0;
+  const biggestRewardUsd = biggestBounty ? (biggestBounty.reward_usd || 0) : 0;
+
   const mostAbsurd = topBounties.length > 0 ? topBounties[0].title : 'N/A';
   const avgScore = topBounties.length > 0
     ? topBounties.reduce((sum, b) => sum + (b.viral_score || 0), 0) / topBounties.length
     : 0;
-
+ 
   const recapData = {
     totalBounties: recentBounties.length,
     biggestReward,
+    biggestRewardUsd,
     mostAbsurd,
     avgScore,
   };
-
+ 
   const { text, templateUsed } = generateRecapTweet(recapData);
 
   console.log(`\n${'─'.repeat(50)}`);
