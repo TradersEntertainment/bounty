@@ -35,6 +35,7 @@ import { scoreBounty, categorizeBounty, formatScoreSummary } from './scorer.js';
 import { generateTweet, generateRecapTweet, generateThread } from './templates.js';
 import { filterBounty, filterTweet, getFilterStats } from './filter.js';
 import { postTweet, postThread, verifyCredentials, initTwitterClient } from './twitter.js';
+import { sendTelegramMessage } from './telegram.js';
 
 // Load .env
 loadEnv();
@@ -237,6 +238,10 @@ async function cmdPost(flags) {
         markTweetPosted(draft.id, result.tweetIds[0]);
         log.info(`✅ Thread posted! First tweet ID: ${result.tweetIds[0]}`);
         posted++;
+
+        // Send to Telegram as a unified post
+        const telegramText = threadParts.join('\n\n');
+        await sendTelegramMessage(telegramText);
       } else {
         markTweetFailed(draft.id, result.error);
         log.error(`❌ Thread posting failed: ${result.error}`);
@@ -249,6 +254,9 @@ async function cmdPost(flags) {
         markTweetPosted(draft.id, result.tweetId);
         log.info(`✅ Tweet posted! ID: ${result.tweetId}`);
         posted++;
+
+        // Send to Telegram
+        await sendTelegramMessage(draft.tweet_text);
       } else {
         markTweetFailed(draft.id, result.error);
         log.error(`❌ Tweet posting failed: ${result.error}`);
@@ -312,6 +320,9 @@ async function cmdRecap(flags) {
     saveTweetDraft(null, text, templateUsed);
     markTweetPosted(result.tweetId, result.tweetId);
     log.info(`✅ Daily recap posted! ID: ${result.tweetId}`);
+
+    // Send to Telegram
+    await sendTelegramMessage(text);
   } else {
     log.error(`❌ Recap posting failed: ${result.error}`);
   }
