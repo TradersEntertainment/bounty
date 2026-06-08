@@ -1,0 +1,37 @@
+{
+  "name": "bounty-feed-hq",
+  "version": "1.0.0",
+  "description": "Automated Twitter/X bot that curates viral bounties from Pump.fun GO",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "scan": "node src/index.js scan",
+    "score": "node src/index.js score",
+    "draft": "node src/index.js draft",
+    "post": "node src/index.js post",
+    "auto": "node src/index.js auto",
+    "dry-run": "node src/index.js scan --dry-run",
+    "install-browser": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.49.1",
+    "twitter-api-v2": "^1.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "twitter",
+    "bot",
+    "pump.fun",
+    "solana",
+    "bounty",
+    "crypto"
+  ],
+  "author": "BountyFeedHQ",
+  "license": "MIT"
+}
