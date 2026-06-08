@@ -556,12 +556,14 @@ async function main() {
 
   // Handle FORCE_RESCORE environment variable to clear and recalculate
   if (process.env.FORCE_RESCORE === 'true') {
-    log.info('🔄 FORCE_RESCORE is enabled. Clearing existing scores & drafts to recalculate with LLM...');
+    log.info('🔄 FORCE_RESCORE is enabled. Clearing database tables to start completely fresh...');
     const db = getDb();
     try {
+      db.prepare('DELETE FROM submissions').run();
       db.prepare('DELETE FROM scores').run();
-      db.prepare("DELETE FROM tweets").run();
-      log.info('✅ Database tables cleared. Ready to rescore.');
+      db.prepare('DELETE FROM tweets').run();
+      db.prepare('DELETE FROM bounties').run();
+      log.info('✅ Database tables cleared. Ready to rescrape and rescore.');
     } catch (err) {
       log.error(`Failed to execute FORCE_RESCORE: ${err.message}`);
     }
