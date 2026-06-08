@@ -37,6 +37,7 @@ import { filterBounty, filterTweet, getFilterStats } from './filter.js';
 import { postTweet, postThread, verifyCredentials, initTwitterClient } from './twitter.js';
 import { sendTelegramMessage } from './telegram.js';
 import { startServer } from './server.js';
+import { generateTweetWithLLM } from './llm.js';
 
 // Load .env
 loadEnv();
@@ -117,7 +118,7 @@ async function cmdScore(flags) {
 
   let scored = 0;
   for (const bounty of unscored) {
-    const scores = scoreBounty(bounty);
+    const scores = await scoreBounty(bounty);
     upsertScore(bounty.id, scores);
 
     if (flags.verbose) {
@@ -165,30 +166,51 @@ async function cmdDraft(flags) {
     const category = categorizeBounty(bounty, scores);
 
     // Generate tweet
-    const { text, templateUsed } = generateTweet(bounty, category);
+    let text = '';
+    let templateUsed = 'template';
+    let isThread = scores.viralScore >= 80;
+    let finalTweetText = '';
+
+    if (process.env.GROQ_API_KEY) {
+      log.info(`🤖 Generating custom tweet with Groq for: "${bounty.title}"`);
+      const llmTweet = await generateTweetWithLLM(bounty, scores);
+      if (llmTweet) {
+        finalTweetText = llmTweet.text;
+        isThread = llmTweet.type === 'thread';
+        templateUsed = 'groq_llm';
+      }
+    }
+
+    if (!finalTweetText) {
+      // Fallback to template-based generation
+      const result = generateTweet(bounty, category);
+      text = result.text;
+      templateUsed = result.templateUsed;
+      
+      if (isThread) {
+        const thread = generateThread(bounty, scores);
+        finalTweetText = thread.join('\n---THREAD_SEPARATOR---\n');
+      } else {
+        finalTweetText = text;
+      }
+    }
 
     // Safety check on generated tweet
-    const tweetFilter = filterTweet(text);
+    const firstTweetPart = isThread ? finalTweetText.split('---THREAD_SEPARATOR---')[0] : finalTweetText;
+    const tweetFilter = filterTweet(firstTweetPart);
     if (!tweetFilter.safe) {
       log.warn(`⛔ Tweet filtered for "${bounty.title}": ${tweetFilter.reason}`);
       continue;
     }
 
-    // Check for threads (very high score bounties)
-    if (scores.viralScore >= 80) {
-      const thread = generateThread(bounty, scores);
-      saveTweetDraft(bounty.id, thread.join('\n---THREAD_SEPARATOR---\n'), templateUsed, 'thread');
-      log.info(`🧵 Thread drafted for "${bounty.title}" (score: ${scores.viralScore})`);
-    } else {
-      saveTweetDraft(bounty.id, text, templateUsed, 'single');
-      log.info(`📝 Tweet drafted for "${bounty.title}" (score: ${scores.viralScore})`);
-    }
+    saveTweetDraft(bounty.id, finalTweetText, templateUsed, isThread ? 'thread' : 'single');
+    log.info(`📝 Tweet drafted for "${bounty.title}" (score: ${scores.viralScore}, method: ${templateUsed})`);
 
     if (flags.verbose) {
       console.log(`\n─── Draft for: ${bounty.title} ───`);
       console.log(`Category: ${category}`);
       console.log(`Score: ${scores.viralScore}/100`);
-      console.log(`Tweet:\n${text}`);
+      console.log(`Tweet:\n${finalTweetText}`);
     }
 
     drafted++;

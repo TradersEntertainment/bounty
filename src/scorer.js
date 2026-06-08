@@ -9,6 +9,8 @@
  *   - Timing:    10%  (is it fresh / trending / time-sensitive)
  */
 
+import { scoreBountyWithLLM } from './llm.js';
+
 const WEIGHTS = {
   reward: 0.25,
   absurdity: 0.30,
@@ -292,7 +294,23 @@ function calcTimingScore(bounty) {
  * Calculate the full viral score for a bounty.
  * Returns an object with all sub-scores and the weighted total.
  */
-export function scoreBounty(bounty) {
+export async function scoreBounty(bounty) {
+  // Try LLM scoring first if key is present
+  if (process.env.GROQ_API_KEY) {
+    const llmScores = await scoreBountyWithLLM(bounty);
+    if (llmScores) {
+      return {
+        viralScore: Math.min(100, llmScores.viralScore || 0),
+        rewardScore: llmScores.rewardScore || 0,
+        absurdityScore: llmScores.absurdityScore || 0,
+        doabilityScore: llmScores.doabilityScore || 0,
+        visualScore: llmScores.visualScore || 0,
+        timingScore: llmScores.timingScore || 0,
+        reasoning: llmScores.reasoning || '',
+      };
+    }
+  }
+
   const title = bounty.title || '';
   const description = bounty.description || '';
   const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
