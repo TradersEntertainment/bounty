@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BountyFeedHQ — Pump.fun GO Curation Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Style -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background blobs -->
+    <div class="blur-blob blob-1"></div>
+    <div class="blur-blob blob-2"></div>
+
+    <header>
+        <div class="container navbar">
+            <div class="logo">
+                <span class="gradient-text">BountyFeedHQ</span>
+                <span class="badge">Live Bot</span>
+            </div>
+            <nav class="social-links">
+                <a href="https://x.com/BountyFeedHQ" target="_blank" id="twitter-link" class="social-btn twitter">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>Follow @BountyFeedHQ</span>
+                </a>
+                <a href="https://t.me/bountyfeedhq" target="_blank" id="telegram-link" class="social-btn telegram">
+                    <i class="fa-brands fa-telegram"></i>
+                    <span>Join Channel</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h1 class="hero-title">Tap Into What's <span class="gradient-text">Happening</span> On Pump.fun GO</h1>
+            <p class="hero-subtitle">The ultimate automated curation feed tracking real-world crypto bounties. From the absurdly hilarious to high-paying tasks, we score, filter, and broadcast the best daily.</p>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="stats-grid" id="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-database"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="stat-total-scraped">-</div>
+                    <div class="stat-label">Total Scraped</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-paper-plane"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="stat-total-posted">-</div>
+                    <div class="stat-label">Broadcasted Posts</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="stat-today-scraped">-</div>
+                    <div class="stat-label">Scraped Today</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-coins"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="stat-highest-reward">-</div>
+                    <div class="stat-label">Highest Reward Today</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content Layout -->
+        <div class="content-layout">
+            
+            <!-- Left: Featured & Latest Bounties -->
+            <div class="main-feed-area">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-fire text-gradient"></i> Hot Bounties Curation</h2>
+                    <div class="filters">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="viral">Highly Viral (Score > 60)</button>
+                        <button class="filter-btn" data-filter="high-pay">High Pay (> 0.5 SOL)</button>
+                        <button class="filter-btn" data-filter="posted">Broadcasted</button>
+                    </div>
+                </div>
+
+                <div id="bounties-grid" class="bounties-grid">
+                    <!-- Loading skeleton -->
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </div>
+
+            <!-- Right: Bot Curation Status -->
+            <aside class="sidebar-area">
+                <div class="glass-panel info-box">
+                    <h3><i class="fa-solid fa-robot"></i> About @BountyFeedHQ</h3>
+                    <p>This page displays live data collected by the BountyFeedHQ automation agent running on Railway.</p>
+                    <div class="status-indicator">
+                        <span class="pulse-dot"></span>
+                        <span>Bot Status: Active and Scanning</span>
+                    </div>
+                    <hr class="divider">
+                    <h4>Curation Filters Active</h4>
+                    <ul class="filter-list">
+                        <li><i class="fa-solid fa-shield-halved text-success"></i> Family Friendly Only</li>
+                        <li><i class="fa-solid fa-filter text-info"></i> Spam & Low Effort Filtered</li>
+                        <li><i class="fa-solid fa-star text-warning"></i> Scored on 5 metrics</li>
+                    </ul>
+                </div>
+
+                <div class="glass-panel stats-box">
+                    <h3>Curation Parameters</h3>
+                    <div class="parameter-row">
+                        <span>Scan Frequency</span>
+                        <strong>Every 30 Minutes</strong>
+                    </div>
+                    <div class="parameter-row">
+                        <span>Auto-Post Threshold</span>
+                        <strong>&ge; 40 Viral Score</strong>
+                    </div>
+                    <div class="parameter-row">
+                        <span>Max Posts / Day</span>
+                        <strong>10 Tweets / Unlimited Telegram</strong>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container footer-content">
+            <p>&copy; 2026 BountyFeedHQ. Powered by Solana & Pump.fun GO.</p>
+            <div class="footer-links">
+                <a href="https://x.com/BountyFeedHQ" target="_blank"><i class="fa-brands fa-x-twitter"></i> Twitter</a>
+                <a href="https://t.me/bountyfeedhq" target="_blank"><i class="fa-brands fa-telegram"></i> Telegram</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- App Script -->
+    <script src="app.js"></script>
+</body>
+</html>

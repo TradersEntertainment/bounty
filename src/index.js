@@ -36,6 +36,7 @@ import { generateTweet, generateRecapTweet, generateThread } from './templates.j
 import { filterBounty, filterTweet, getFilterStats } from './filter.js';
 import { postTweet, postThread, verifyCredentials, initTwitterClient } from './twitter.js';
 import { sendTelegramMessage } from './telegram.js';
+import { startServer } from './server.js';
 
 // Load .env
 loadEnv();
@@ -367,6 +368,9 @@ async function cmdAuto(flags) {
  * CRON: Start the scheduled auto-runner.
  */
 async function cmdCron(flags) {
+  const port = process.env.PORT || 3000;
+  const server = startServer(port);
+
   const cronExpr = process.env.SCAN_CRON || '*/30 * * * *';
   log.info(`⏰ Starting cron scheduler: ${cronExpr}`);
   log.info('Press Ctrl+C to stop\n');
@@ -400,6 +404,9 @@ async function cmdCron(flags) {
   // Keep process alive
   process.on('SIGINT', () => {
     log.info('\n👋 Shutting down...');
+    if (server) {
+      server.close();
+    }
     closeDatabase();
     process.exit(0);
   });
@@ -484,7 +491,8 @@ Commands:
   post        Post the next draft tweet to Twitter/X
   recap       Generate and post a daily recap tweet
   auto        Run the full pipeline (scan → score → draft → post)
-  cron        Start the scheduled auto-runner
+  cron        Start the scheduled auto-runner & launch web server
+  server      Start the web server dashboard only
   status      Show database stats and pending drafts
   verify      Verify Twitter API credentials
 
@@ -546,6 +554,16 @@ async function main() {
       case 'cron':
         await cmdCron(flags);
         return; // Don't close DB for cron
+      case 'server':
+        const port = process.env.PORT || 3000;
+        startServer(port);
+        // Keep process alive
+        process.on('SIGINT', () => {
+          log.info('\n👋 Shutting down server...');
+          closeDatabase();
+          process.exit(0);
+        });
+        return; // Don't close DB for server
       case 'status':
         await cmdStatus();
         break;
@@ -564,7 +582,7 @@ async function main() {
     }
     process.exitCode = 1;
   } finally {
-    if (command !== 'cron') {
+    if (command !== 'cron' && command !== 'server') {
       closeDatabase();
     }
   }
