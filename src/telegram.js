@@ -67,3 +67,71 @@ export async function sendTelegramMessage(text) {
     };
   }
 }
+
+/**
+ * Send a photo to the Telegram channel with a caption.
+ *
+ * @param {Buffer} photoBuffer - The photo buffer to send
+ * @param {string} caption - The caption for the photo
+ * @returns {Promise<{ success: boolean, messageId: number, error: string }>}
+ */
+export async function sendTelegramPhoto(photoBuffer, caption) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const enabled = process.env.TELEGRAM_ENABLED === 'true';
+
+  if (!enabled) {
+    log.debug('Telegram posting is disabled. Skipping.');
+    return { success: false, messageId: null, error: 'Telegram posting disabled' };
+  }
+
+  if (!botToken || !chatId) {
+    log.warn('Telegram BOT_TOKEN or CHAT_ID not configured. Skipping post.');
+    return { success: false, messageId: null, error: 'Telegram credentials not configured' };
+  }
+
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+    
+    // Telegram caption limit is 1024 characters
+    let captionText = caption || '';
+    if (captionText.length > 1024) {
+      captionText = captionText.slice(0, 1020) + '...';
+    }
+
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('caption', captionText);
+    
+    const blob = new Blob([photoBuffer]);
+    formData.append('photo', blob, 'image.png');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      const errorMsg = data.description || `HTTP ${response.status}`;
+      log.error(`Telegram API error (sendPhoto): ${errorMsg}`);
+      return { success: false, messageId: null, error: errorMsg };
+    }
+
+    log.info(`Telegram photo posted successfully: ${data.result.message_id}`);
+    return {
+      success: true,
+      messageId: data.result.message_id,
+      error: null,
+    };
+  } catch (error) {
+    log.error(`Failed to send Telegram photo: ${error.message}`);
+    return {
+      success: false,
+      messageId: null,
+      error: error.message,
+    };
+  }
+}
+

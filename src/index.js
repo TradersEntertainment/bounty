@@ -35,7 +35,7 @@ import { scoreBounty, categorizeBounty, formatScoreSummary } from './scorer.js';
 import { generateTweet, generateRecapTweet, generateThread } from './templates.js';
 import { filterBounty, filterTweet, getFilterStats } from './filter.js';
 import { postTweet, postThread, verifyCredentials, initTwitterClient, uploadMedia } from './twitter.js';
-import { sendTelegramMessage } from './telegram.js';
+import { sendTelegramMessage, sendTelegramPhoto } from './telegram.js';
 import { getBountyMedia } from './media.js';
 import { startServer } from './server.js';
 import { generateTweetWithLLM } from './llm.js';
@@ -283,9 +283,11 @@ async function cmdPost(flags) {
 
     // ── Step 1: Get bounty media (download image or screenshot) ──
     let mediaId = null;
+    let localMedia = null;
     try {
       const media = await getBountyMedia(draft);
       if (media) {
+        localMedia = media;
         log.info(`📸 Uploading media to Twitter (${(media.buffer.length / 1024).toFixed(1)}KB)...`);
         const uploadResult = await uploadMedia(media.buffer, media.mimeType);
         if (uploadResult.success) {
@@ -308,7 +310,14 @@ async function cmdPost(flags) {
 
       // Send to Telegram with link appended
       const telegramText = threadParts.join('\n\n') + (bountyLink ? `\n\n🔗 ${bountyLink}` : '');
-      await sendTelegramMessage(telegramText);
+      if (localMedia) {
+        const telResult = await sendTelegramPhoto(localMedia.buffer, telegramText);
+        if (!telResult.success) {
+          await sendTelegramMessage(telegramText);
+        }
+      } else {
+        await sendTelegramMessage(telegramText);
+      }
 
       // Post first tweet with media
       const firstResult = await postTweet(threadParts[0], { mediaId });
@@ -350,7 +359,14 @@ async function cmdPost(flags) {
 
       // Send to Telegram with link appended
       const telegramText = draft.tweet_text + (bountyLink ? `\n\n🔗 ${bountyLink}` : '');
-      await sendTelegramMessage(telegramText);
+      if (localMedia) {
+        const telResult = await sendTelegramPhoto(localMedia.buffer, telegramText);
+        if (!telResult.success) {
+          await sendTelegramMessage(telegramText);
+        }
+      } else {
+        await sendTelegramMessage(telegramText);
+      }
 
       // Post main tweet with media attached (no link in text)
       const result = await postTweet(draft.tweet_text, { mediaId });
