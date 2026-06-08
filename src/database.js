@@ -232,20 +232,28 @@ export function upsertSubmission(submission) {
   `);
 
   const now = new Date().toISOString();
-  stmt.run({
-    id: submission.id,
-    bounty_id: submission.bountyId || '',
-    submitter: submission.submitter || '',
-    submitter_avatar: submission.submitterAvatar || '',
-    media_url: submission.mediaUrl || '',
-    media_type: submission.mediaType || '',
-    description: submission.description || '',
-    status: submission.status || 'pending',
-    votes: submission.votes || 0,
-    source_url: submission.sourceUrl || '',
-    scraped_at: now,
-    raw_data: submission.rawData ? JSON.stringify(submission.rawData) : '',
-  });
+  try {
+    stmt.run({
+      id: submission.id,
+      bounty_id: submission.bountyId || '',
+      submitter: submission.submitter || '',
+      submitter_avatar: submission.submitterAvatar || '',
+      media_url: submission.mediaUrl || '',
+      media_type: submission.mediaType || '',
+      description: submission.description || '',
+      status: submission.status || 'pending',
+      votes: submission.votes || 0,
+      source_url: submission.sourceUrl || '',
+      scraped_at: now,
+      raw_data: submission.rawData ? JSON.stringify(submission.rawData) : '',
+    });
+  } catch (error) {
+    if (error.message.includes('FOREIGN KEY')) {
+      // Quietly ignore since this happens when a parent bounty was filtered out due to safety settings
+    } else {
+      throw error;
+    }
+  }
 }
 
 /**
