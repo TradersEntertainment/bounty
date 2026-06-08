@@ -340,7 +340,7 @@ export function saveTweetDraft(bountyId, tweetText, templateUsed, tweetType = 's
  */
 export function getDraftTweets(limit = 10) {
   return db.prepare(`
-    SELECT t.*, b.title as bounty_title, b.reward_amount, s.viral_score
+    SELECT t.*, b.title as bounty_title, b.reward_amount, b.source_url, b.image_url, s.viral_score
     FROM tweets t
     LEFT JOIN bounties b ON t.bounty_id = b.id
     LEFT JOIN scores s ON t.bounty_id = s.bounty_id

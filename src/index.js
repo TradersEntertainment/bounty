@@ -34,8 +34,9 @@ import { scrapeBounties, scrapeSubmissions, scrapeAll } from './scraper.js';
 import { scoreBounty, categorizeBounty, formatScoreSummary } from './scorer.js';
 import { generateTweet, generateRecapTweet, generateThread } from './templates.js';
 import { filterBounty, filterTweet, getFilterStats } from './filter.js';
-import { postTweet, postThread, verifyCredentials, initTwitterClient } from './twitter.js';
+import { postTweet, postThread, verifyCredentials, initTwitterClient, uploadMedia } from './twitter.js';
 import { sendTelegramMessage } from './telegram.js';
+import { getBountyMedia } from './media.js';
 import { startServer } from './server.js';
 import { generateTweetWithLLM } from './llm.js';
 
@@ -243,6 +244,7 @@ async function cmdDraft(flags) {
 
 /**
  * POST: Post the next draft tweet to Twitter/X.
+ * Flow: Upload image → Post main tweet with image → Reply with bounty link
  */
 async function cmdPost(flags) {
   const maxDaily = parseInt(process.env.MAX_TWEETS_PER_DAY || '8', 10);
@@ -273,33 +275,93 @@ async function cmdPost(flags) {
       continue;
     }
 
-    // Handle threads
+    // ── Step 1: Get bounty media (download image or screenshot) ──
+    let mediaId = null;
+    try {
+      const media = await getBountyMedia(draft);
+      if (media) {
+        log.info(`📸 Uploading media to Twitter (${(media.buffer.length / 1024).toFixed(1)}KB)...`);
+        const uploadResult = await uploadMedia(media.buffer, media.mimeType);
+        if (uploadResult.success) {
+          mediaId = uploadResult.mediaId;
+          log.info(`✅ Media uploaded: ${mediaId}`);
+        } else {
+          log.warn(`⚠️ Media upload failed: ${uploadResult.error} — posting without image`);
+        }
+      }
+    } catch (err) {
+      log.warn(`⚠️ Media processing error: ${err.message} — posting without image`);
+    }
+
+    // Determine bounty link for reply
+    const bountyLink = draft.source_url || '';
+
+    // ── Step 2: Post tweet(s) ──
     if (draft.tweet_type === 'thread') {
       const threadParts = draft.tweet_text.split('\n---THREAD_SEPARATOR---\n');
-      
-      // Send to Telegram as a unified post (Independent of Twitter)
-      const telegramText = threadParts.join('\n\n');
+
+      // Send to Telegram with link appended
+      const telegramText = threadParts.join('\n\n') + (bountyLink ? `\n\n🔗 ${bountyLink}` : '');
       await sendTelegramMessage(telegramText);
 
-      const result = await postThread(threadParts);
-
-      if (result.success) {
-        markTweetPosted(draft.id, result.tweetIds[0]);
-        log.info(`✅ Thread posted! First tweet ID: ${result.tweetIds[0]}`);
-        posted++;
-      } else {
-        markTweetFailed(draft.id, result.error);
-        log.error(`❌ Thread posting failed: ${result.error}`);
+      // Post first tweet with media
+      const firstResult = await postTweet(threadParts[0], { mediaId });
+      if (!firstResult.success) {
+        markTweetFailed(draft.id, firstResult.error);
+        log.error(`❌ Thread first tweet failed: ${firstResult.error}`);
+        continue;
       }
-    } else {
-      // Single tweet
-      
-      // Send to Telegram (Independent of Twitter)
-      await sendTelegramMessage(draft.tweet_text);
 
-      const result = await postTweet(draft.tweet_text);
+      let lastTweetId = firstResult.tweetId;
+      let allSuccess = true;
+
+      // Post remaining thread parts as replies
+      for (let i = 1; i < threadParts.length; i++) {
+        await sleep(1000);
+        const partResult = await postTweet(threadParts[i], { replyToId: lastTweetId });
+        if (!partResult.success) {
+          log.error(`❌ Thread part ${i + 1} failed: ${partResult.error}`);
+          allSuccess = false;
+          break;
+        }
+        lastTweetId = partResult.tweetId;
+      }
+
+      // Post bounty link as final reply
+      if (allSuccess && bountyLink) {
+        await sleep(1000);
+        const linkReply = `🔗 link aşağıda\n\n${bountyLink}`;
+        await postTweet(linkReply, { replyToId: lastTweetId });
+        log.info(`🔗 Link reply posted under thread`);
+      }
+
+      markTweetPosted(draft.id, firstResult.tweetId);
+      log.info(`✅ Thread posted! First tweet ID: ${firstResult.tweetId}`);
+      posted++;
+
+    } else {
+      // ── Single tweet ──
+
+      // Send to Telegram with link appended
+      const telegramText = draft.tweet_text + (bountyLink ? `\n\n🔗 ${bountyLink}` : '');
+      await sendTelegramMessage(telegramText);
+
+      // Post main tweet with media attached (no link in text)
+      const result = await postTweet(draft.tweet_text, { mediaId });
 
       if (result.success) {
+        // Post bounty link as a reply to the main tweet
+        if (bountyLink) {
+          await sleep(1500);
+          const linkReply = `🔗 link aşağıda\n\n${bountyLink}`;
+          const replyResult = await postTweet(linkReply, { replyToId: result.tweetId });
+          if (replyResult.success) {
+            log.info(`🔗 Link reply posted: ${replyResult.tweetId}`);
+          } else {
+            log.warn(`⚠️ Link reply failed: ${replyResult.error}`);
+          }
+        }
+
         markTweetPosted(draft.id, result.tweetId);
         log.info(`✅ Tweet posted! ID: ${result.tweetId}`);
         posted++;

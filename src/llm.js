@@ -171,7 +171,6 @@ Bounty details:
 Title: "${bounty.title}"
 Description: "${bounty.description || 'No description.'}"
 Reward: ${rewardText}
-Url: ${bounty.source_url || 'https://pump.fun/go/bounties'}
 
 Curation Scores:
 - Viral Potential: ${scores.viralScore}/100
@@ -183,8 +182,9 @@ Instructions:
 2. Highlight why this is hilarious, absurd, or a massive bag. Always use the formatted reward amount exactly as provided above (including the USD value in parentheses, e.g. "X SOL (~$Y)") when mentioning the reward.
 3. If the viral score is very high (>= 80), you can write a short 2-3 tweet thread. Otherwise, write a single tweet.
 4. Keep the single tweet or individual thread parts under 280 characters.
-5. Always include the bounty URL (${bounty.source_url || 'https://pump.fun/go/bounties'}).
-6. Include relevant hashtags like #PumpFunGO, #Solana, #Bounty.
+5. DO NOT include any URLs or links in the tweet. The link will be posted separately as a reply.
+6. Include 1-2 relevant hashtags like #PumpFunGO, #Solana at the end.
+7. The tweet should feel natural and punchy, not like a bot. Vary your style — don't always start the same way.
 
 Return ONLY a raw JSON object with this structure:
 {
