@@ -15,7 +15,7 @@ const log = createLogger('media');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const MEDIA_DIR = join(__dirname, '..', 'data', 'media');
+const MEDIA_DIR = process.env.MEDIA_DIR || join(__dirname, '..', 'data', 'media');
 
 // Ensure media directory exists
 if (!existsSync(MEDIA_DIR)) {
