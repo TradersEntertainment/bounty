@@ -669,6 +669,18 @@ async function main() {
   // Initialize database
   initDatabase();
 
+  // One-time cleanup for toes bounty to repost it with correct rewards
+  try {
+    const db = getDb();
+    const toesUuid = '97672ce0-3348-40fe-a2d7-563539000943';
+    db.prepare('DELETE FROM tweets WHERE bounty_id = ?').run(toesUuid);
+    db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(toesUuid);
+    db.prepare('DELETE FROM bounties WHERE id = ?').run(toesUuid);
+    log.info(`🧹 One-time cleanup: Removed toes bounty ${toesUuid} to trigger correct repost.`);
+  } catch (err) {
+    log.warn(`Failed to run one-time cleanup: ${err.message}`);
+  }
+
   // Handle FORCE_RESCORE environment variable to clear and recalculate
   if (process.env.FORCE_RESCORE === 'true') {
     log.info('🔄 FORCE_RESCORE is enabled. Clearing database tables to start completely fresh...');
