@@ -251,10 +251,12 @@ export function generateTweet(bounty, category = 'general') {
   const templates = TEMPLATES[category] || TEMPLATES.general;
   const template = pickRandom(templates);
   const templateIndex = templates.indexOf(template);
- 
-  const rewardSol = bounty.reward_amount || bounty.rewardAmount || 0;
+  
+  const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
   const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
-  let rewardText = formatReward(rewardSol);
+  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
+
+  let rewardText = formatReward(rewardAmount);
   if (rewardUsd > 0) {
     rewardText = `${rewardText} (~$${Math.round(rewardUsd).toLocaleString()})`;
   }
@@ -268,12 +270,17 @@ export function generateTweet(bounty, category = 'general') {
     url: bounty.source_url || bounty.sourceUrl || 'https://pump.fun/go/bounties',
     deadline: bounty.deadline || '',
   };
- 
+  
   const text = template(data);
- 
+  
   // Ensure tweet is within 280 character limit
-  const finalText = enforceCharLimit(text);
- 
+  let finalText = enforceCharLimit(text);
+
+  // If currency is not SOL, replace all occurrences of "SOL" in the final text with the token currency name
+  if (currency !== 'SOL') {
+    finalText = finalText.replace(/\bSOL\b/g, currency);
+  }
+  
   return {
     text: finalText,
     templateUsed: `${category}_${templateIndex}`,
@@ -313,9 +320,11 @@ export function generateRecapTweet(recapData) {
  * Generate a thread (multiple tweets) for a particularly viral bounty.
  */
 export function generateThread(bounty, scores) {
-  const rewardSol = bounty.reward_amount || bounty.rewardAmount || 0;
+  const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
   const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
-  let rewardText = formatReward(rewardSol);
+  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
+
+  let rewardText = formatReward(rewardAmount);
   if (rewardUsd > 0) {
     rewardText = `${rewardText} (~$${Math.round(rewardUsd).toLocaleString()})`;
   }
@@ -354,7 +363,11 @@ Check out this bounty and claim that bag: ${data.url}
 #PumpFunGO #Solana #Bounty #Crypto`,
   ];
 
-  return thread.map(t => enforceCharLimit(t));
+  const result = thread.map(t => enforceCharLimit(t));
+  if (currency !== 'SOL') {
+    return result.map(t => t.replace(/\bSOL\b/g, currency));
+  }
+  return result;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────

@@ -106,8 +106,10 @@ async function cmdScan(flags) {
       continue;
     }
 
-    // Assign calculated USD amount
-    bounty.rewardUsd = (bounty.rewardAmount || 0) * solPrice;
+    // Assign calculated USD amount only for SOL rewards (token rewards already have parsed rewardUsd)
+    if (bounty.rewardCurrency === 'SOL') {
+      bounty.rewardUsd = (bounty.rewardAmount || 0) * solPrice;
+    }
 
     upsertBounty(bounty);
     newCount++;

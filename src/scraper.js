@@ -388,14 +388,49 @@ async function extractFromDOM(page, baseUrl) {
         const descEl = card.querySelector('p, [class*="desc"], [class*="Desc"], [class*="body"], [class*="Body"], [class*="content"]');
         const description = descEl?.textContent?.trim() || '';
 
-        // Extract reward amount (look for SOL amounts while filtering out bonding curve / market cap)
+        // Extract reward amount, currency, and USD value
         let rewardAmount = 0;
-        const rewardEl = card.querySelector('[class*="reward"], [class*="prize"], [class*="amount"], [class*="payout"], [class*="pool"]');
+        let rewardCurrency = 'SOL';
+        let rewardUsd = 0;
+
+        const rewardEl = card.querySelector('.text-positive, [class*="positive"]');
+        const subEl = card.querySelector('[class*="tabular-nums"][class*="tertiary"], [class*="tertiary"]');
+
         if (rewardEl) {
-          const match = rewardEl.textContent.match(/([\d,.]+)\s*SOL/i);
-          if (match) rewardAmount = parseFloat(match[1].replace(/,/g, ''));
+          const rewardText = rewardEl.textContent.trim();
+          
+          if (rewardText.toLowerCase().includes('sol')) {
+            const match = rewardText.match(/([\d,.]+)\s*SOL/i);
+            if (match) {
+              rewardAmount = parseFloat(match[1].replace(/,/g, ''));
+              rewardCurrency = 'SOL';
+            }
+          } else if (rewardText.startsWith('$')) {
+            let cleaned = rewardText.replace('$', '').trim();
+            if (cleaned.match(/[\d]+[\.,]\d{3}$/)) {
+              cleaned = cleaned.replace(/[\.,]/g, '');
+            } else {
+              cleaned = cleaned.replace(/,/g, '');
+            }
+            rewardUsd = parseFloat(cleaned) || 0;
+            
+            if (subEl) {
+              const subText = subEl.textContent.trim();
+              const tokenMatch = subText.match(/([\d,.]+)([kKmM]?)\s+(\$?[a-zA-Z0-9_-]+)/);
+              if (tokenMatch) {
+                let amt = parseFloat(tokenMatch[1].replace(/,/g, ''));
+                const unit = tokenMatch[2].toLowerCase();
+                if (unit === 'k') amt *= 1000;
+                else if (unit === 'm') amt *= 1000000;
+                
+                rewardAmount = amt;
+                rewardCurrency = tokenMatch[3];
+              }
+            }
+          }
         }
 
+        // Fallbacks for reward if the above did not set it
         if (rewardAmount === 0) {
           const elements = Array.from(card.querySelectorAll('*'));
           for (const el of elements) {
@@ -406,6 +441,7 @@ async function extractFromDOM(page, baseUrl) {
                 const val = parseFloat(match[1].replace(/,/g, ''));
                 if (val > 0 && val < 500) {
                   rewardAmount = val;
+                  rewardCurrency = 'SOL';
                   break;
                 }
               }
@@ -420,6 +456,7 @@ async function extractFromDOM(page, baseUrl) {
             const val = parseFloat(match[1].replace(/,/g, ''));
             if (val > 0 && val < 500) {
               rewardAmount = val;
+              rewardCurrency = 'SOL';
               break;
             }
           }
@@ -511,7 +548,8 @@ async function extractFromDOM(page, baseUrl) {
           title,
           description,
           rewardAmount,
-          rewardCurrency: 'SOL',
+          rewardCurrency,
+          rewardUsd,
           creator,
           creatorAvatar,
           deadline,

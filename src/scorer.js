@@ -329,10 +329,18 @@ export async function scoreBounty(bounty) {
   const title = bounty.title || '';
   const description = bounty.description || '';
   const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
+  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
+  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
 
-  const rewardScore = calcRewardScore(rewardAmount);
+  // Calculate SOL equivalent for scoring if it's a token reward
+  let solEquivalent = rewardAmount;
+  if (currency !== 'SOL' && rewardUsd > 0) {
+    solEquivalent = rewardUsd / 150; // estimate SOL price as 150
+  }
+
+  const rewardScore = calcRewardScore(solEquivalent);
   const absurdityScore = calcAbsurdityScore(title, description);
-  const doabilityScore = calcDoabilityScore(title, description, rewardAmount);
+  const doabilityScore = calcDoabilityScore(title, description, solEquivalent);
   const visualScore = calcVisualScore(title, description);
   const timingScore = calcTimingScore(bounty);
 
