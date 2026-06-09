@@ -295,6 +295,21 @@ function calcTimingScore(bounty) {
  * Returns an object with all sub-scores and the weighted total.
  */
 export async function scoreBounty(bounty) {
+  // Self-promotion override: If the bounty mentions BountyFeedHQ, give it a perfect score
+  // to guarantee it gets drafted and posted as an advertisement for the bot itself.
+  const lowerText = `${bounty.title || ''} ${bounty.description || ''}`.toLowerCase();
+  if (lowerText.includes('bountyfeedhq')) {
+    return {
+      viralScore: 100,
+      rewardScore: 100,
+      absurdityScore: 100,
+      doabilityScore: 100,
+      visualScore: 100,
+      timingScore: 100,
+      reasoning: "Self-promotion bounty to advertise BountyFeedHQ!",
+    };
+  }
+
   // Try LLM scoring first if key is present
   if (process.env.GROQ_API_KEY) {
     const llmScores = await scoreBountyWithLLM(bounty);
