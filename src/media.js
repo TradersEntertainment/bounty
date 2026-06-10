@@ -106,6 +106,21 @@ async function screenshotBountyPage(url, filename) {
     // Wait for content to render
     await page.waitForTimeout(3500);
 
+    // Try to dismiss the "Continue" modal/popup if present
+    try {
+      await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const btn = buttons.find(b => b.textContent.trim().toLowerCase() === 'continue');
+        if (btn) {
+          btn.click();
+        }
+      });
+      // Wait a moment for the modal to fade out
+      await page.waitForTimeout(1000);
+    } catch (err) {
+      log.warn(`Failed to click Continue button: ${err.message}`);
+    }
+
     // Try to find the main bounty card/content area for a focused screenshot
     const selectors = [
       '[class*="bounty"]',

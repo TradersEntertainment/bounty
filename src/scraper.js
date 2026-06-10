@@ -394,70 +394,50 @@ async function extractFromDOM(page, baseUrl) {
         let rewardUsd = 0;
 
         const rewardEl = card.querySelector('.text-positive, [class*="positive"]');
-        const subEl = card.querySelector('[class*="tabular-nums"][class*="tertiary"], [class*="tertiary"]');
-
         if (rewardEl) {
           const rewardText = rewardEl.textContent.trim();
           
-          if (rewardText.toLowerCase().includes('sol')) {
-            const match = rewardText.match(/([\d,.]+)\s*SOL/i);
-            if (match) {
-              rewardAmount = parseFloat(match[1].replace(/,/g, ''));
-              rewardCurrency = 'SOL';
-            }
-          } else if (rewardText.startsWith('$')) {
+          if (rewardText.startsWith('$')) {
             let cleaned = rewardText.replace('$', '').trim();
-            if (cleaned.match(/[\d]+[\.,]\d{3}$/)) {
+            if (cleaned.match(/^\d+[\.,]\d{3}$/)) {
               cleaned = cleaned.replace(/[\.,]/g, '');
             } else {
               cleaned = cleaned.replace(/,/g, '');
             }
             rewardUsd = parseFloat(cleaned) || 0;
-            
-            if (subEl) {
-              const subText = subEl.textContent.trim();
-              const tokenMatch = subText.match(/([\d,.]+)([kKmM]?)\s+(\$?[a-zA-Z0-9_-]+)/);
-              if (tokenMatch) {
-                let amt = parseFloat(tokenMatch[1].replace(/,/g, ''));
-                const unit = tokenMatch[2].toLowerCase();
+          } else if (rewardText.toLowerCase().includes('sol')) {
+            const match = rewardText.match(/([\d,.]+)\s*SOL/i);
+            if (match) {
+              rewardAmount = parseFloat(match[1].replace(/,/g, ''));
+              rewardCurrency = 'SOL';
+            }
+          }
+
+          const parent = rewardEl.parentElement;
+          if (parent) {
+            const spans = Array.from(parent.querySelectorAll('span'));
+            const amountSpan = spans.find(s => s !== rewardEl && s.textContent.trim().length > 0 && !s.textContent.trim().startsWith('$'));
+            if (amountSpan) {
+              const amountText = amountSpan.textContent.trim();
+              const match = amountText.match(/([\d,.]+)\s*([kKmM]?)\s*(\$?[a-zA-Z0-9_-]+)/);
+              if (match) {
+                let amt = parseFloat(match[1].replace(/,/g, ''));
+                const unit = match[2].toLowerCase();
                 if (unit === 'k') amt *= 1000;
                 else if (unit === 'm') amt *= 1000000;
                 
                 rewardAmount = amt;
-                rewardCurrency = tokenMatch[3];
-              }
-            }
-          }
-        }
-
-        // Fallbacks for reward if the above did not set it
-        if (rewardAmount === 0) {
-          const elements = Array.from(card.querySelectorAll('*'));
-          for (const el of elements) {
-            const text = el.textContent || '';
-            if (text.includes('SOL') && !text.match(/(?:volume|market|cap|mcap|progress|bonding|created|supply)/i)) {
-              const match = text.match(/([\d,.]+)\s*SOL/i);
-              if (match) {
-                const val = parseFloat(match[1].replace(/,/g, ''));
-                if (val > 0 && val < 500) {
-                  rewardAmount = val;
-                  rewardCurrency = 'SOL';
-                  break;
+                rewardCurrency = match[3];
+              } else {
+                const parts = amountText.split(/\s+/);
+                if (parts.length >= 2) {
+                  const amt = parseFloat(parts[0].replace(/,/g, ''));
+                  if (!isNaN(amt)) {
+                    rewardAmount = amt;
+                    rewardCurrency = parts[1];
+                  }
                 }
               }
-            }
-          }
-        }
-
-        if (rewardAmount === 0) {
-          const allText = card.textContent || '';
-          const matches = allText.matchAll(/([\d,.]+)\s*SOL/gi);
-          for (const match of matches) {
-            const val = parseFloat(match[1].replace(/,/g, ''));
-            if (val > 0 && val < 500) {
-              rewardAmount = val;
-              rewardCurrency = 'SOL';
-              break;
             }
           }
         }

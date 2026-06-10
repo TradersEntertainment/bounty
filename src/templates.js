@@ -257,9 +257,6 @@ export function generateTweet(bounty, category = 'general') {
   const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
 
   let rewardText = formatReward(rewardAmount);
-  if (rewardUsd > 0) {
-    rewardText = `${rewardText} (~$${Math.round(rewardUsd).toLocaleString()})`;
-  }
 
   // Build template data
   const data = {
@@ -271,14 +268,41 @@ export function generateTweet(bounty, category = 'general') {
     deadline: bounty.deadline || '',
   };
   
-  const text = template(data);
+  let text = template(data);
   
+  // Format the cashtag and summary line
+  let tagTicker = currency;
+  if (!tagTicker.startsWith('$')) {
+    tagTicker = `$${tagTicker.toUpperCase()}`;
+  }
+  
+  let summaryLine = '';
+  if (rewardUsd > 0) {
+    summaryLine = `💰 $${Math.round(rewardUsd).toLocaleString('en-US')} in ${tagTicker}`;
+  } else {
+    summaryLine = `💰 Reward: ${rewardText} in ${tagTicker}`;
+  }
+
+  // Insert the summary line before the hashtags
+  const hashtagIndex = text.indexOf('#');
+  if (hashtagIndex !== -1) {
+    const body = text.slice(0, hashtagIndex).trim();
+    const tags = text.slice(hashtagIndex).trim();
+    text = `${body}\n\n${summaryLine}\n\n${tags}`;
+  } else {
+    text = `${text}\n\n${summaryLine}`;
+  }
+
   // Ensure tweet is within 280 character limit
   let finalText = enforceCharLimit(text);
 
-  // If currency is not SOL, replace all occurrences of "SOL" in the final text with the token currency name
+  // If currency is not SOL, replace all occurrences of "SOL" in the final text with the token currency name as cashtag
   if (currency !== 'SOL') {
-    finalText = finalText.replace(/\bSOL\b/g, currency);
+    let replacement = currency;
+    if (!replacement.startsWith('$')) {
+      replacement = `$${replacement.toUpperCase()}`;
+    }
+    finalText = finalText.replace(/\bSOL\b/g, replacement);
   }
   
   return {
@@ -298,7 +322,7 @@ export function generateRecapTweet(recapData) {
   const rewardUsd = recapData.biggestRewardUsd || 0;
   let rewardText = formatReward(rewardSol);
   if (rewardUsd > 0) {
-    rewardText = `${rewardText} SOL (~$${Math.round(rewardUsd).toLocaleString()})`;
+    rewardText = `${rewardText} SOL (~$${Math.round(rewardUsd).toLocaleString('en-US')})`;
   } else {
     rewardText = `${rewardText} SOL`;
   }
@@ -325,15 +349,24 @@ export function generateThread(bounty, scores) {
   const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
 
   let rewardText = formatReward(rewardAmount);
-  if (rewardUsd > 0) {
-    rewardText = `${rewardText} (~$${Math.round(rewardUsd).toLocaleString()})`;
-  }
 
   const data = {
     title: truncateTitle(bounty.title || 'Untitled Bounty', 80),
     reward: rewardText,
     url: bounty.source_url || bounty.sourceUrl || 'https://pump.fun/go/bounties',
   };
+
+  let tagTicker = currency;
+  if (!tagTicker.startsWith('$')) {
+    tagTicker = `$${tagTicker.toUpperCase()}`;
+  }
+
+  let summaryLine = '';
+  if (rewardUsd > 0) {
+    summaryLine = `💰 $${Math.round(rewardUsd).toLocaleString('en-US')} in ${tagTicker}`;
+  } else {
+    summaryLine = `💰 Reward: ${rewardText} in ${tagTicker}`;
+  }
 
   const thread = [
     // Tweet 1: Hook
@@ -363,9 +396,24 @@ Check out this bounty and claim that bag: ${data.url}
 #PumpFunGO #Solana #Bounty #Crypto`,
   ];
 
+  // Insert summaryLine before the hashtags in Tweet 3
+  let tweet3 = thread[2];
+  const hashtagIndex = tweet3.indexOf('#');
+  if (hashtagIndex !== -1) {
+    const body = tweet3.slice(0, hashtagIndex).trim();
+    const tags = tweet3.slice(hashtagIndex).trim();
+    thread[2] = `${body}\n\n${summaryLine}\n\n${tags}`;
+  } else {
+    thread[2] = `${tweet3}\n\n${summaryLine}`;
+  }
+
   const result = thread.map(t => enforceCharLimit(t));
   if (currency !== 'SOL') {
-    return result.map(t => t.replace(/\bSOL\b/g, currency));
+    let replacement = currency;
+    if (!replacement.startsWith('$')) {
+      replacement = `$${replacement.toUpperCase()}`;
+    }
+    return result.map(t => t.replace(/\bSOL\b/g, replacement));
   }
   return result;
 }
@@ -384,6 +432,8 @@ function truncateTitle(title, maxLength) {
  * Format reward amount nicely.
  */
 function formatReward(amount) {
+  if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(1)}B`;
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M`;
   if (amount >= 1000) return `${(amount / 1000).toFixed(1)}K`;
   if (amount >= 1) return amount.toFixed(1);
   if (amount >= 0.01) return amount.toFixed(2);
