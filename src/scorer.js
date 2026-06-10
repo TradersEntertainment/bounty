@@ -76,21 +76,24 @@ const VISUAL_MEDIUM = [
 
 /**
  * Calculate the reward score (0-100).
- * Based on SOL amount. Logarithmic scale so even small bounties get some score.
+ * Uses USD value when available, falls back to SOL-based tiers.
  */
-function calcRewardScore(rewardAmount) {
-  if (!rewardAmount || rewardAmount <= 0) return 5;
+function calcRewardScore(rewardAmount, rewardUsd = 0) {
+  // Prefer USD value for scoring since token amounts vary wildly
+  const usdValue = rewardUsd > 0 ? rewardUsd : (rewardAmount || 0) * 150; // rough SOL fallback
 
-  // SOL reward tiers
-  if (rewardAmount >= 100) return 100;
-  if (rewardAmount >= 50) return 90;
-  if (rewardAmount >= 20) return 80;
-  if (rewardAmount >= 10) return 70;
-  if (rewardAmount >= 5) return 60;
-  if (rewardAmount >= 2) return 50;
-  if (rewardAmount >= 1) return 40;
-  if (rewardAmount >= 0.5) return 30;
-  if (rewardAmount >= 0.1) return 20;
+  if (usdValue <= 0) return 5;
+
+  // USD reward tiers
+  if (usdValue >= 15000) return 100;
+  if (usdValue >= 7500) return 90;
+  if (usdValue >= 3000) return 80;
+  if (usdValue >= 1500) return 70;
+  if (usdValue >= 750) return 60;
+  if (usdValue >= 300) return 50;
+  if (usdValue >= 150) return 40;
+  if (usdValue >= 75) return 30;
+  if (usdValue >= 15) return 20;
   return 10;
 }
 
@@ -332,15 +335,10 @@ export async function scoreBounty(bounty) {
   const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
   const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
 
-  // Calculate SOL equivalent for scoring if it's a token reward
-  let solEquivalent = rewardAmount;
-  if (currency !== 'SOL' && rewardUsd > 0) {
-    solEquivalent = rewardUsd / 150; // estimate SOL price as 150
-  }
-
-  const rewardScore = calcRewardScore(solEquivalent);
+  // Calculate reward score using USD value directly
+  const rewardScore = calcRewardScore(rewardAmount, rewardUsd);
   const absurdityScore = calcAbsurdityScore(title, description);
-  const doabilityScore = calcDoabilityScore(title, description, solEquivalent);
+  const doabilityScore = calcDoabilityScore(title, description, rewardAmount);
   const visualScore = calcVisualScore(title, description);
   const timingScore = calcTimingScore(bounty);
 

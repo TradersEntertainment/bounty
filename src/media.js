@@ -111,24 +111,43 @@ async function screenshotBountyPage(url, filename) {
       await page.evaluate(() => {
         const keywords = ['continue', 'get started', 'accept all', 'agree', 'accept'];
         const buttons = Array.from(document.querySelectorAll('button'));
-        let clickedAny = false;
         
         for (const kw of keywords) {
-          // Find buttons that exactly match the text or contain it
           const btn = buttons.find(b => {
             const txt = b.textContent.trim().toLowerCase();
             return txt === kw || txt.includes(kw);
           });
           if (btn) {
             btn.click();
-            clickedAny = true;
           }
         }
       });
       // Wait a moment for any modals to fade out
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1500);
     } catch (err) {
       log.warn(`Failed to dismiss modals: ${err.message}`);
+    }
+
+    // Validate that the page actually loaded bounty content
+    // If it's just a welcome screen or error page, skip the screenshot
+    const hasContent = await page.evaluate(() => {
+      const bodyText = document.body?.textContent || '';
+      // Check for bounty-specific content indicators
+      const hasBountyContent = bodyText.includes('bounty') || bodyText.includes('Bounty') ||
+        bodyText.includes('reward') || bodyText.includes('Reward') ||
+        bodyText.includes('submission') || bodyText.includes('Submission') ||
+        bodyText.includes('SOL') || bodyText.includes('deadline');
+      // Check for error/splash indicators
+      const isSplash = bodyText.includes('Welcome to Pump') && bodyText.length < 500;
+      const isError = bodyText.includes('404') || bodyText.includes('not found') || bodyText.includes('Page not found');
+      
+      return hasBountyContent && !isSplash && !isError;
+    });
+
+    if (!hasContent) {
+      log.warn(`Page at ${url} doesn't appear to contain bounty content, skipping screenshot`);
+      await browser.close();
+      return null;
     }
 
     // Try to find the main bounty card/content area for a focused screenshot

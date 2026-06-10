@@ -7,7 +7,7 @@
 
 const TEMPLATES = {
   funny: [
-    (b) => `💀 someone is paying ${b.reward} SOL for:
+    (b) => `💀 someone is paying ${b.reward} for:
 
 "${b.title}"
 
@@ -17,7 +17,7 @@ i love this timeline
 
     (b) => `bro what 😭😭😭
 
-"${b.title}" — ${b.reward} SOL
+"${b.title}" — ${b.reward}
 
 the internet remains undefeated
 
@@ -25,7 +25,7 @@ the internet remains undefeated
 
     (b) => `"${b.title}"
 
-${b.reward} SOL. dead serious. 💀
+${b.reward}. dead serious. 💀
 
 this is why i wake up every morning
 
@@ -33,7 +33,7 @@ this is why i wake up every morning
 
     (b) => `i need everyone to stop what they're doing rn
 
-someone just put up ${b.reward} SOL for:
+someone just put up ${b.reward} for:
 "${b.title}"
 
 😭😭😭
@@ -42,7 +42,7 @@ someone just put up ${b.reward} SOL for:
 
     (b) => `the bounties keep getting crazier
 
-"${b.title}" — ${b.reward} SOL 💀
+"${b.title}" — ${b.reward} 💀
 
 who's doing it?
 
@@ -50,7 +50,7 @@ who's doing it?
   ],
 
   big_bounty: [
-    (b) => `${b.reward} SOL bounty just dropped 🚨
+    (b) => `${b.reward} bounty just dropped 🚨
 
 "${b.title}"
 
@@ -58,7 +58,7 @@ that's real money. who wants it?
 
 #PumpFunGO #Solana`,
 
-    (b) => `somebody really put up ${b.reward} SOL for this:
+    (b) => `somebody really put up ${b.reward} for this:
 
 "${b.title}"
 
@@ -68,13 +68,13 @@ massive bag sitting right there 💰
 
     (b) => `"${b.title}"
 
-💰 ${b.reward} SOL reward
+💰 ${b.reward} reward
 
 this is not a joke. someone go claim this bag
 
 #PumpFunGO #Solana`,
 
-    (b) => `${b.reward} SOL on the table 👀
+    (b) => `${b.reward} on the table 👀
 
 "${b.title}"
 
@@ -84,7 +84,7 @@ are you really gonna let someone else take this?
 
     (b) => `we don't talk enough about the bags on @PumpFunGO
 
-"${b.title}" — ${b.reward} SOL
+"${b.title}" — ${b.reward}
 
 someone go get this 🏃‍♂️
 
@@ -94,7 +94,7 @@ someone go get this 🏃‍♂️
   extreme: [
     (b) => `"${b.title}"
 
-${b.reward} SOL if you actually do it
+${b.reward} if you actually do it
 
 who's unhinged enough? 🤯
 
@@ -102,13 +102,13 @@ who's unhinged enough? 🤯
 
     (b) => `this might be the most insane bounty i've ever seen
 
-"${b.title}" — ${b.reward} SOL 💀
+"${b.title}" — ${b.reward} 💀
 
 tag someone who'd actually do this
 
 #PumpFunGO #Solana`,
 
-    (b) => `${b.reward} SOL to "${b.title}"
+    (b) => `${b.reward} to "${b.title}"
 
 i— 😭
 
@@ -118,7 +118,7 @@ i— 😭
 
     (b) => `"${b.title}"
 
-reward: ${b.reward} SOL
+reward: ${b.reward}
 
 this is absolutely unhinged and i'm here for it 🍿
 
@@ -126,7 +126,7 @@ this is absolutely unhinged and i'm here for it 🍿
 
     (b) => `every day @PumpFunGO gets wilder
 
-"${b.title}" for ${b.reward} SOL
+"${b.title}" for ${b.reward}
 
 what timeline is this 💀
 
@@ -136,7 +136,7 @@ what timeline is this 💀
   completed: [
     (b) => `someone actually did it ✅
 
-"${b.title}" — ${b.reward} SOL claimed
+"${b.title}" — ${b.reward} claimed
 
 absolute legend 🫡
 
@@ -146,13 +146,13 @@ absolute legend 🫡
 
 "${b.title}" — COMPLETED
 
-${b.reward} SOL secured 💰
+${b.reward} secured 💰
 
 #PumpFunGO #Solana`,
 
     (b) => `bag claimed ✅
 
-"${b.title}" — ${b.reward} SOL paid out
+"${b.title}" — ${b.reward} paid out
 
 never doubt a degen on a mission
 
@@ -162,13 +162,13 @@ never doubt a degen on a mission
   easy_money: [
     (b) => `this one's basically free money:
 
-"${b.title}" — ${b.reward} SOL
+"${b.title}" — ${b.reward}
 
 what are you waiting for? 🏃‍♂️
 
 #PumpFunGO #Solana`,
 
-    (b) => `easiest ${b.reward} SOL of your life:
+    (b) => `easiest ${b.reward} of your life:
 
 "${b.title}"
 
@@ -176,9 +176,9 @@ go get that bread 🍞
 
 #PumpFunGO #Solana`,
 
-    (b) => `if you're not checking @PumpFunGO you're leaving SOL on the table
+    (b) => `if you're not checking @PumpFunGO you're leaving money on the table
 
-"${b.title}" — ${b.reward} SOL
+"${b.title}" — ${b.reward}
 
 this is free money anon 👀
 
@@ -188,19 +188,19 @@ this is free money anon 👀
   general: [
     (b) => `new bounty 👀
 
-"${b.title}" — ${b.reward} SOL
+"${b.title}" — ${b.reward}
 
 #PumpFunGO #Solana`,
 
     (b) => `"${b.title}"
 
-${b.reward} SOL reward on @PumpFunGO
+${b.reward} reward on @PumpFunGO
 
 who's on it?
 
 #PumpFunGO #Solana`,
 
-    (b) => `${b.reward} SOL bounty live rn:
+    (b) => `${b.reward} bounty live rn:
 
 "${b.title}"
 
@@ -241,6 +241,29 @@ function pickRandom(arr) {
 }
 
 /**
+ * Build a human-readable reward string from bounty data.
+ * Uses USD as the primary display and appends token ticker.
+ * Examples: "$23,469 in $SOL", "$15,279 in $MEMECOIN", "370 SOL"
+ */
+function buildRewardDisplay(bounty) {
+  const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
+  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
+  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
+
+  let tagTicker = currency;
+  if (!tagTicker.startsWith('$')) {
+    tagTicker = `$${tagTicker.toUpperCase()}`;
+  }
+
+  if (rewardUsd > 0) {
+    return `$${Math.round(rewardUsd).toLocaleString('en-US')} in ${tagTicker}`;
+  }
+
+  // Fallback: use raw amount with currency
+  return `${formatReward(rewardAmount)} ${currency}`;
+}
+
+/**
  * Generate a tweet for a bounty using the appropriate template category.
  *
  * @param {Object} bounty - The bounty object from the database
@@ -251,17 +274,13 @@ export function generateTweet(bounty, category = 'general') {
   const templates = TEMPLATES[category] || TEMPLATES.general;
   const template = pickRandom(templates);
   const templateIndex = templates.indexOf(template);
-  
-  const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
-  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
-  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
 
-  let rewardText = formatReward(rewardAmount);
+  const rewardDisplay = buildRewardDisplay(bounty);
 
   // Build template data
   const data = {
     title: truncateTitle(bounty.title || 'Untitled Bounty', 80),
-    reward: rewardText,
+    reward: rewardDisplay,
     creator: bounty.creator || 'anon',
     submissions: bounty.submission_count || bounty.submissionCount || 0,
     url: bounty.source_url || bounty.sourceUrl || 'https://pump.fun/go/bounties',
@@ -270,41 +289,9 @@ export function generateTweet(bounty, category = 'general') {
   
   let text = template(data);
   
-  // Format the cashtag and summary line
-  let tagTicker = currency;
-  if (!tagTicker.startsWith('$')) {
-    tagTicker = `$${tagTicker.toUpperCase()}`;
-  }
-  
-  let summaryLine = '';
-  if (rewardUsd > 0) {
-    summaryLine = `💰 $${Math.round(rewardUsd).toLocaleString('en-US')} in ${tagTicker}`;
-  } else {
-    summaryLine = `💰 Reward: ${rewardText} in ${tagTicker}`;
-  }
-
-  // Insert the summary line before the hashtags
-  const hashtagIndex = text.indexOf('#');
-  if (hashtagIndex !== -1) {
-    const body = text.slice(0, hashtagIndex).trim();
-    const tags = text.slice(hashtagIndex).trim();
-    text = `${body}\n\n${summaryLine}\n\n${tags}`;
-  } else {
-    text = `${text}\n\n${summaryLine}`;
-  }
-
   // Ensure tweet is within 280 character limit
   let finalText = enforceCharLimit(text);
 
-  // If currency is not SOL, replace all occurrences of "SOL" in the final text with the token currency name as cashtag
-  if (currency !== 'SOL') {
-    let replacement = currency;
-    if (!replacement.startsWith('$')) {
-      replacement = `$${replacement.toUpperCase()}`;
-    }
-    finalText = finalText.replace(/\bSOL\b/g, replacement);
-  }
-  
   return {
     text: finalText,
     templateUsed: `${category}_${templateIndex}`,
@@ -318,13 +305,13 @@ export function generateRecapTweet(recapData) {
   const templates = TEMPLATES.daily_recap;
   const template = pickRandom(templates);
  
-  const rewardSol = recapData.biggestReward || 0;
   const rewardUsd = recapData.biggestRewardUsd || 0;
-  let rewardText = formatReward(rewardSol);
+  let rewardText = '';
   if (rewardUsd > 0) {
-    rewardText = `${rewardText} SOL (~$${Math.round(rewardUsd).toLocaleString('en-US')})`;
+    rewardText = `$${Math.round(rewardUsd).toLocaleString('en-US')}`;
   } else {
-    rewardText = `${rewardText} SOL`;
+    const rewardSol = recapData.biggestReward || 0;
+    rewardText = `${formatReward(rewardSol)} SOL`;
   }
 
   const data = {
@@ -344,29 +331,13 @@ export function generateRecapTweet(recapData) {
  * Generate a thread (multiple tweets) for a particularly viral bounty.
  */
 export function generateThread(bounty, scores) {
-  const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
-  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
-  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
-
-  let rewardText = formatReward(rewardAmount);
+  const rewardDisplay = buildRewardDisplay(bounty);
 
   const data = {
     title: truncateTitle(bounty.title || 'Untitled Bounty', 80),
-    reward: rewardText,
+    reward: rewardDisplay,
     url: bounty.source_url || bounty.sourceUrl || 'https://pump.fun/go/bounties',
   };
-
-  let tagTicker = currency;
-  if (!tagTicker.startsWith('$')) {
-    tagTicker = `$${tagTicker.toUpperCase()}`;
-  }
-
-  let summaryLine = '';
-  if (rewardUsd > 0) {
-    summaryLine = `💰 $${Math.round(rewardUsd).toLocaleString('en-US')} in ${tagTicker}`;
-  } else {
-    summaryLine = `💰 Reward: ${rewardText} in ${tagTicker}`;
-  }
 
   const thread = [
     // Tweet 1: Hook
@@ -374,7 +345,7 @@ export function generateThread(bounty, scores) {
 
 "${data.title}"
 
-${data.reward} SOL reward 💰
+${data.reward} reward 💰
 
 Let me break down why this is absolutely wild 👇`,
 
@@ -393,29 +364,12 @@ Check out this bounty and claim that bag: ${data.url}
 
 @PumpFunGO is where degens become legends 🫡
 
+💰 ${data.reward}
+
 #PumpFunGO #Solana #Bounty #Crypto`,
   ];
 
-  // Insert summaryLine before the hashtags in Tweet 3
-  let tweet3 = thread[2];
-  const hashtagIndex = tweet3.indexOf('#');
-  if (hashtagIndex !== -1) {
-    const body = tweet3.slice(0, hashtagIndex).trim();
-    const tags = tweet3.slice(hashtagIndex).trim();
-    thread[2] = `${body}\n\n${summaryLine}\n\n${tags}`;
-  } else {
-    thread[2] = `${tweet3}\n\n${summaryLine}`;
-  }
-
-  const result = thread.map(t => enforceCharLimit(t));
-  if (currency !== 'SOL') {
-    let replacement = currency;
-    if (!replacement.startsWith('$')) {
-      replacement = `$${replacement.toUpperCase()}`;
-    }
-    return result.map(t => t.replace(/\bSOL\b/g, replacement));
-  }
-  return result;
+  return thread.map(t => enforceCharLimit(t));
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -448,45 +402,25 @@ function enforceCharLimit(text, limit = 280) {
   // Twitter counts URLs as 23 chars each
   const urlRegex = /https?:\/\/[^\s]+/g;
   const urls = text.match(urlRegex) || [];
-  let adjustedLength = text.length;
-
+  let effectiveLength = text.length;
   for (const url of urls) {
-    adjustedLength -= url.length;
-    adjustedLength += 23; // Twitter's t.co length
+    effectiveLength -= url.length;
+    effectiveLength += 23;
   }
 
-  if (adjustedLength <= limit) return text;
+  if (effectiveLength <= limit) return text;
 
-  // If over limit, try to trim the tweet text (not URLs or hashtags)
-  // Simple approach: remove hashtags if needed
-  const lines = text.split('\n');
-  while (adjustedLength > limit && lines.length > 1) {
-    const removed = lines.pop();
-    if (removed.startsWith('#')) {
-      adjustedLength -= removed.length + 1;
-    } else {
-      lines.push(removed); // Don't remove non-hashtag lines
-      break;
+  // Try to trim by shortening the title in quotes
+  const titleMatch = text.match(/"([^"]+)"/);
+  if (titleMatch) {
+    const fullTitle = titleMatch[1];
+    const excess = effectiveLength - limit;
+    if (fullTitle.length > excess + 10) {
+      const shortened = fullTitle.slice(0, fullTitle.length - excess - 5) + '...';
+      return text.replace(`"${fullTitle}"`, `"${shortened}"`);
     }
   }
 
-  return lines.join('\n');
-}
-
-/**
- * Get all available template categories.
- */
-export function getTemplateCategories() {
-  return Object.keys(TEMPLATES);
-}
-
-/**
- * Get template count per category.
- */
-export function getTemplateStats() {
-  const stats = {};
-  for (const [category, templates] of Object.entries(TEMPLATES)) {
-    stats[category] = templates.length;
-  }
-  return stats;
+  // Last resort: truncate and add ellipsis
+  return text.slice(0, limit - 3) + '...';
 }

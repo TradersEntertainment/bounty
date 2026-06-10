@@ -103,13 +103,23 @@ async function callGroqAPI(messages, responseFormat = null, attempt = 1) {
  * @returns {Promise<Object|null>}
  */
 export async function scoreBountyWithLLM(bounty) {
+  const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
+  const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
+  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
+  let rewardDisplay = '';
+  if (rewardUsd > 0) {
+    rewardDisplay = `$${Math.round(rewardUsd).toLocaleString('en-US')} worth of ${currency}`;
+  } else {
+    rewardDisplay = `${rewardAmount} ${currency}`;
+  }
+
   const prompt = `You are the core brain of BountyFeedHQ, an automated curation bot that finds funny, absurd, or high-paying real-world tasks on pump.fun GO.
 Analyze this bounty and assign scores (0 to 100) on 5 dimensions.
 
 Bounty details:
 Title: "${bounty.title}"
 Description: "${bounty.description || 'No description provided.'}"
-Reward: ${bounty.reward_amount || bounty.rewardAmount || 0} SOL
+Reward: ${rewardDisplay}
 
 Dimensions to score:
 1. rewardScore: Based on SOL reward (e.g. <0.1 SOL is low, >1 SOL is high, >10 SOL is extremely high).
@@ -157,11 +167,16 @@ Return ONLY a raw JSON object with this structure:
  * @returns {Promise<{ text: string, type: 'single'|'thread' }|null>}
  */
 export async function generateTweetWithLLM(bounty, scores) {
-  const rewardSol = bounty.reward_amount || bounty.rewardAmount || 0;
   const rewardUsd = bounty.reward_usd || bounty.rewardUsd || 0;
-  let rewardText = `${rewardSol} SOL`;
+  const currency = bounty.reward_currency || bounty.rewardCurrency || 'SOL';
+  let rewardText = '';
   if (rewardUsd > 0) {
-    rewardText = `${rewardSol} SOL (~$${Math.round(rewardUsd).toLocaleString()})`;
+    let tagTicker = currency;
+    if (!tagTicker.startsWith('$')) tagTicker = `$${tagTicker.toUpperCase()}`;
+    rewardText = `$${Math.round(rewardUsd).toLocaleString('en-US')} in ${tagTicker}`;
+  } else {
+    const rewardAmount = bounty.reward_amount || bounty.rewardAmount || 0;
+    rewardText = `${rewardAmount} ${currency}`;
   }
 
   const prompt = `You are a professional degen copywriter running @BountyFeedHQ.
@@ -179,7 +194,7 @@ Curation Scores:
 
 Instructions:
 1. Write in a funny, slightly sarcastic, and engaging crypto/degen culture tone (use lowercase, degen slang like "anon", "ser", "gm", emojis like 💀, 😂, 👀, 🚨).
-2. Highlight why this is hilarious, absurd, or a massive bag. Always use the formatted reward amount exactly as provided above (including the USD value in parentheses, e.g. "X SOL (~$Y)") when mentioning the reward.
+2. Highlight why this is hilarious, absurd, or a massive bag. Always use the formatted reward amount exactly as provided above (e.g. "$23,000 in $SOL") when mentioning the reward. Do NOT invent or change the reward amount.
 3. If the viral score is very high (>= 80), you can write a short 2-3 tweet thread. Otherwise, write a single tweet.
 4. Keep the single tweet or individual thread parts under 280 characters.
 5. DO NOT include any URLs or links in the tweet. The link will be posted separately as a reply.
