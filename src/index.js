@@ -669,16 +669,31 @@ async function main() {
   // Initialize database
   initDatabase();
 
-  // One-time cleanup for toes bounty to repost it with correct rewards
+  // One-time cleanup for toes and parade bounties to repost them with correct rewards, and clear stale drafts
   try {
     const db = getDb();
+    
+    // 1. toes cleanup (just in case)
     const toesUuid = '97672ce0-3348-40fe-a2d7-563539000943';
     db.prepare('DELETE FROM tweets WHERE bounty_id = ?').run(toesUuid);
     db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(toesUuid);
     db.prepare('DELETE FROM bounties WHERE id = ?').run(toesUuid);
-    log.info(`🧹 One-time cleanup: Removed toes bounty ${toesUuid} to trigger correct repost.`);
+
+    // 2. parade cleanup to trigger correct repost
+    const paradeUuid = '098b7525-1ed3-467c-aeb2-f93a4d823956';
+    db.prepare('DELETE FROM tweets WHERE bounty_id = ? OR tweet_text LIKE ?').run(paradeUuid, '%go to a parade%');
+    db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(paradeUuid);
+    db.prepare('DELETE FROM bounties WHERE id = ? OR source_url LIKE ?').run(paradeUuid, '%098b7525%');
+
+    // 3. Clear all unsent drafts and their corresponding unscored/undrafted bounties to start clean with new scraper
+    db.prepare("DELETE FROM tweets WHERE status != 'posted'").run();
+    db.prepare("DELETE FROM scores WHERE bounty_id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
+    db.prepare("DELETE FROM bounties WHERE id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
+    db.prepare("DELETE FROM submissions WHERE bounty_id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
+
+    log.info(`🧹 One-time cleanup: Cleared stale drafts and removed toes/parade bounties to trigger correct repost.`);
   } catch (err) {
-    log.warn(`Failed to run one-time cleanup: ${err.message}`);
+    log.warn(`Failed to run database cleanup: ${err.message}`);
   }
 
   // Handle FORCE_RESCORE environment variable to clear and recalculate

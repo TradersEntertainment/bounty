@@ -466,7 +466,7 @@ async function extractFromDOM(page, baseUrl) {
         const submissionCount = submissionMatch ? parseInt(submissionMatch[1], 10) : 0;
 
         // Extract image
-        const imageEl = card.querySelector('img:not([class*="avatar"]):not([class*="Avatar"]):not([class*="profile"]):not([class*="icon"])');
+        const imageEl = card.querySelector('button[aria-label*="image"] img, button[class*="aspect"] img, [class*="aspect-[4/3]"] img');
         const imageUrl = imageEl?.src || '';
 
         // Extract link: prefer finding the bounty UUID in React internal properties, then outerHTML, then fallbacks
