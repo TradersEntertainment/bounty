@@ -669,11 +669,11 @@ async function main() {
   // Initialize database
   initDatabase();
 
-  // One-time cleanup for toes and parade bounties to repost them with correct rewards, and clear stale drafts
+  // One-time cleanup for toes, parade, and attention bounties to repost them with correct rewards, and clear stale drafts
   try {
     const db = getDb();
     
-    // 1. toes cleanup (just in case)
+    // 1. toes cleanup
     const toesUuid = '97672ce0-3348-40fe-a2d7-563539000943';
     db.prepare('DELETE FROM tweets WHERE bounty_id = ?').run(toesUuid);
     db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(toesUuid);
@@ -685,13 +685,19 @@ async function main() {
     db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(paradeUuid);
     db.prepare('DELETE FROM bounties WHERE id = ? OR source_url LIKE ?').run(paradeUuid, '%098b7525%');
 
-    // 3. Clear all unsent drafts and their corresponding unscored/undrafted bounties to start clean with new scraper
+    // 3. attention business shill cleanup to trigger correct repost
+    const attentionUuid = '683a7b0c-58e8-4d37-8adf-2431c4d8837a';
+    db.prepare('DELETE FROM tweets WHERE bounty_id = ? OR tweet_text LIKE ?').run(attentionUuid, '%ATTENTION%');
+    db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(attentionUuid);
+    db.prepare('DELETE FROM bounties WHERE id = ? OR source_url LIKE ?').run(attentionUuid, '%683a7b0c%');
+
+    // 4. Clear all unsent drafts and their corresponding unscored/undrafted bounties to start clean with new scraper
     db.prepare("DELETE FROM tweets WHERE status != 'posted'").run();
     db.prepare("DELETE FROM scores WHERE bounty_id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
     db.prepare("DELETE FROM bounties WHERE id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
     db.prepare("DELETE FROM submissions WHERE bounty_id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
 
-    log.info(`🧹 One-time cleanup: Cleared stale drafts and removed toes/parade bounties to trigger correct repost.`);
+    log.info(`🧹 One-time cleanup: Cleared stale drafts and removed toes/parade/attention bounties to trigger correct repost.`);
   } catch (err) {
     log.warn(`Failed to run database cleanup: ${err.message}`);
   }

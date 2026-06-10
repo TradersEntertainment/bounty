@@ -106,19 +106,29 @@ async function screenshotBountyPage(url, filename) {
     // Wait for content to render
     await page.waitForTimeout(3500);
 
-    // Try to dismiss the "Continue" modal/popup if present
+    // Try to dismiss any modals/popups (Welcome, Terms, Cookies) if present
     try {
       await page.evaluate(() => {
+        const keywords = ['continue', 'get started', 'accept all', 'agree', 'accept'];
         const buttons = Array.from(document.querySelectorAll('button'));
-        const btn = buttons.find(b => b.textContent.trim().toLowerCase() === 'continue');
-        if (btn) {
-          btn.click();
+        let clickedAny = false;
+        
+        for (const kw of keywords) {
+          // Find buttons that exactly match the text or contain it
+          const btn = buttons.find(b => {
+            const txt = b.textContent.trim().toLowerCase();
+            return txt === kw || txt.includes(kw);
+          });
+          if (btn) {
+            btn.click();
+            clickedAny = true;
+          }
         }
       });
-      // Wait a moment for the modal to fade out
+      // Wait a moment for any modals to fade out
       await page.waitForTimeout(1000);
     } catch (err) {
-      log.warn(`Failed to click Continue button: ${err.message}`);
+      log.warn(`Failed to dismiss modals: ${err.message}`);
     }
 
     // Try to find the main bounty card/content area for a focused screenshot
