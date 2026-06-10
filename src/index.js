@@ -275,7 +275,7 @@ async function cmdPost(flags) {
 
     log.info(`\n📤 Posting tweet for: ${draft.bounty_title || 'Unknown'}`);
     console.log(`\n${'─'.repeat(50)}`);
-    console.log(draft.tweet_text.split('---THREAD_SEPARATOR---')[0]);
+    console.log(draft.tweet_text.split(/\s*-+\s*THREAD_SEPARATOR\s*-+\s*/i)[0]);
     console.log(`${'─'.repeat(50)}\n`);
 
     if (flags.dryRun) {
@@ -308,7 +308,7 @@ async function cmdPost(flags) {
 
     // ── Step 2: Post tweet(s) ──
     if (draft.tweet_type === 'thread') {
-      const threadParts = draft.tweet_text.split('\n---THREAD_SEPARATOR---\n');
+      const threadParts = draft.tweet_text.split(/\s*-+\s*THREAD_SEPARATOR\s*-+\s*/i);
 
       // Send to Telegram with link appended
       const telegramText = threadParts.join('\n\n') + (bountyLink ? `\n\n🔗 ${bountyLink}` : '');
