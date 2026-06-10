@@ -673,33 +673,46 @@ async function main() {
   try {
     const db = getDb();
     
+    // Disable foreign keys temporarily during cleanup to avoid constraints failing on stale/deleted data
+    db.pragma('foreign_keys = OFF');
+
     // 1. toes cleanup
     const toesUuid = '97672ce0-3348-40fe-a2d7-563539000943';
     db.prepare('DELETE FROM tweets WHERE bounty_id = ?').run(toesUuid);
     db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(toesUuid);
+    db.prepare('DELETE FROM submissions WHERE bounty_id = ?').run(toesUuid);
     db.prepare('DELETE FROM bounties WHERE id = ?').run(toesUuid);
 
     // 2. parade cleanup to trigger correct repost
     const paradeUuid = '098b7525-1ed3-467c-aeb2-f93a4d823956';
     db.prepare('DELETE FROM tweets WHERE bounty_id = ? OR tweet_text LIKE ?').run(paradeUuid, '%go to a parade%');
     db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(paradeUuid);
+    db.prepare('DELETE FROM submissions WHERE bounty_id = ?').run(paradeUuid);
     db.prepare('DELETE FROM bounties WHERE id = ? OR source_url LIKE ?').run(paradeUuid, '%098b7525%');
 
     // 3. attention business shill cleanup to trigger correct repost
     const attentionUuid = '683a7b0c-58e8-4d37-8adf-2431c4d8837a';
     db.prepare('DELETE FROM tweets WHERE bounty_id = ? OR tweet_text LIKE ?').run(attentionUuid, '%ATTENTION%');
     db.prepare('DELETE FROM scores WHERE bounty_id = ?').run(attentionUuid);
+    db.prepare('DELETE FROM submissions WHERE bounty_id = ?').run(attentionUuid);
     db.prepare('DELETE FROM bounties WHERE id = ? OR source_url LIKE ?').run(attentionUuid, '%683a7b0c%');
 
     // 4. Clear all unsent drafts and their corresponding unscored/undrafted bounties to start clean with new scraper
     db.prepare("DELETE FROM tweets WHERE status != 'posted'").run();
     db.prepare("DELETE FROM scores WHERE bounty_id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
-    db.prepare("DELETE FROM bounties WHERE id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
     db.prepare("DELETE FROM submissions WHERE bounty_id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
+    db.prepare("DELETE FROM bounties WHERE id NOT IN (SELECT bounty_id FROM tweets WHERE status = 'posted')").run();
+
+    // Re-enable foreign keys
+    db.pragma('foreign_keys = ON');
 
     log.info(`🧹 One-time cleanup: Cleared stale drafts and removed toes/parade/attention bounties to trigger correct repost.`);
   } catch (err) {
     log.warn(`Failed to run database cleanup: ${err.message}`);
+    try {
+      const db = getDb();
+      db.pragma('foreign_keys = ON');
+    } catch (_) {}
   }
 
   // Handle FORCE_RESCORE environment variable to clear and recalculate

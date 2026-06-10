@@ -145,9 +145,12 @@ export function upsertBounty(bounty) {
       title = excluded.title,
       description = excluded.description,
       reward_amount = excluded.reward_amount,
+      reward_currency = excluded.reward_currency,
       reward_usd = excluded.reward_usd,
       status = excluded.status,
       submission_count = excluded.submission_count,
+      deadline = excluded.deadline,
+      image_url = excluded.image_url,
       updated_at = excluded.scraped_at,
       raw_data = excluded.raw_data
   `);

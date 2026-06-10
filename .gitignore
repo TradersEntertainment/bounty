@@ -3,3 +3,5 @@ data/
 .env
 *.log
 *.db
+debug_*.js
+src/debug_*.js
