@@ -219,7 +219,7 @@ who's on it?
 
 #PumpFunGO #Solana #DailyRecap`,
 
-    (data) => `gm degens ☀️ here's your daily @PumpFunGO roundup:
+    (data) => `today's @PumpFunGO roundup is wild 🔥
 
 📌 ${data.totalBounties} bounties tracked
 💰 Top reward: ${data.biggestReward}
@@ -373,6 +373,7 @@ export function generateRecapTweet(recapData) {
  
 /**
  * Generate a thread (multiple tweets) for a particularly viral bounty.
+ * 2nd tweet contains actual deliverables and task details.
  */
 export function generateThread(bounty, scores) {
   const rewardDisplay = buildRewardDisplay(bounty);
@@ -381,37 +382,64 @@ export function generateThread(bounty, scores) {
     title: truncateTitle(bounty.title || 'Untitled Bounty', 80),
     reward: rewardDisplay,
     url: bounty.source_url || bounty.sourceUrl || 'https://pump.fun/go/bounties',
+    description: bounty.description || bounty.title || '',
   };
 
-  const thread = [
-    // Tweet 1: Hook
-    `🧵 THREAD: The most unhinged bounty on @PumpFunGO right now
+  // Varied hook openers for tweet 1
+  const hooks = [
+    `🚨 ${data.reward} bounty just dropped on @PumpFunGO
 
 "${data.title}"
 
-${data.reward} reward 💰
+this is actually insane 👇`,
 
-Let me break down why this is absolutely wild 👇`,
+    `okay which one of you is doing this for ${data.reward}? 💀
 
-    // Tweet 2: The details
-    `What they're asking for:
+"${data.title}"
 
-"${truncateTitle(bounty.description || bounty.title || '', 150)}"
+let me explain what they want 👇`,
 
-Viral Score: ${scores.viralScore}/100 🔥
-Absurdity Level: ${scores.absurdityScore >= 60 ? 'OFF THE CHARTS' : scores.absurdityScore >= 30 ? 'Pretty wild' : 'Moderate'} 🤪`,
+    `no way someone is paying ${data.reward} for this 😭
 
-    // Tweet 3: CTA
-    `Think you can do it?
+"${data.title}"
 
-Check out this bounty and claim that bag: ${data.url}
+here's what you gotta do 👇`,
+
+    `${data.reward} sitting right there waiting to be claimed 💰
+
+"${data.title}"
+
+breaking down the requirements 👇`,
+
+    `this might be the wildest bounty i've seen today
+
+"${data.title}" — ${data.reward}
+
+let me tell you what's needed 👇`,
+  ];
+
+  const hook = hooks[Math.floor(Math.random() * hooks.length)];
+
+  // Tweet 2: Actual deliverables and task details
+  const descText = truncateTitle(data.description, 180);
+  const tweet2 = `📋 what's needed:
+
+"${descText}"
+
+${data.reward} on the line. dead serious. 💰
+
+#PumpFunGO`;
+
+  // Tweet 3: CTA with link
+  const tweet3 = `want to claim it?
+
+check it out here: ${data.url}
 
 @PumpFunGO is where degens become legends 🫡
 
-💰 ${data.reward}
+#PumpFunGO #Solana`;
 
-#PumpFunGO #Solana #Bounty #Crypto`,
-  ];
+  const thread = [hook, tweet2, tweet3];
 
   return thread.map(t => enforceCharLimit(t));
 }

@@ -626,7 +626,8 @@ async function cmdRecap(flags) {
 }
 
 /**
- * AUTO: Run the full pipeline — scan → score → draft → post → check completions.
+ * AUTO: Run the full pipeline — scan → score → draft → post.
+ * Completions are checked on a separate schedule in cron mode.
  */
 async function cmdAuto(flags) {
   log.info('🤖 Starting auto pipeline...');
@@ -638,15 +639,11 @@ async function cmdAuto(flags) {
   const shouldPost = flags.auto || process.env.AUTO_POST === 'true';
 
   let postResult = { posted: 0 };
-  let completionResult = { detected: 0, posted: 0 };
   if (shouldPost) {
     // When running automatically in the pipeline, post only 1 tweet per run
     // to distribute posts evenly across cron schedules
     const postFlags = { ...flags, limit: 1 };
     postResult = await cmdPost(postFlags);
-
-    // Check for completed bounties and post success stories
-    completionResult = await cmdCheckCompletions(flags);
   } else {
     log.info('📝 Draft mode — tweets saved but not posted. Use --auto to post.');
     const drafts = getDraftTweets(5);
@@ -663,34 +660,52 @@ async function cmdAuto(flags) {
   log.info(`  Bounties scored: ${scoreResult.scored}`);
   log.info(`  Tweets drafted: ${draftResult.drafted}`);
   log.info(`  Tweets posted: ${postResult.posted}`);
-  log.info(`  Completions detected: ${completionResult.detected}`);
-  log.info(`  Success stories posted: ${completionResult.posted}`);
 }
 
 /**
  * CRON: Start the scheduled auto-runner.
+ * Bounty pipeline runs every hour, completions check runs every 3 hours.
  */
 async function cmdCron(flags) {
   const port = process.env.PORT || 3000;
   const server = startServer(port);
 
-  const cronExpr = process.env.SCAN_CRON || '0 */3 * * *';
-  log.info(`⏰ Starting cron scheduler: ${cronExpr}`);
+  const scanCron = process.env.SCAN_CRON || '0 * * * *'; // every hour
+  const completionCron = process.env.COMPLETION_CRON || '0 */3 * * *'; // every 3 hours
+  log.info(`⏰ Bounty pipeline cron: ${scanCron}`);
+  log.info(`⏰ Completion check cron: ${completionCron}`);
   log.info('Press Ctrl+C to stop\n');
 
   // Run immediately on start
   await cmdAuto(flags);
+  // Also check completions immediately
+  if (flags.auto || process.env.AUTO_POST === 'true') {
+    await cmdCheckCompletions(flags);
+  }
 
-  // Schedule recurring runs
-  cron.schedule(cronExpr, async () => {
+  // Schedule bounty pipeline (hourly by default)
+  cron.schedule(scanCron, async () => {
     log.info(`\n${'═'.repeat(60)}`);
-    log.info(`🔄 Scheduled run at ${new Date().toISOString()}`);
+    log.info(`🔄 Hourly bounty run at ${new Date().toISOString()}`);
     log.info(`${'═'.repeat(60)}\n`);
 
     try {
       await cmdAuto(flags);
     } catch (error) {
-      log.error(`Scheduled run failed: ${error.message}`);
+      log.error(`Scheduled bounty run failed: ${error.message}`);
+    }
+  });
+
+  // Schedule completion check (every 3 hours by default)
+  cron.schedule(completionCron, async () => {
+    log.info(`\n${'═'.repeat(60)}`);
+    log.info(`🏆 Completion check at ${new Date().toISOString()}`);
+    log.info(`${'═'.repeat(60)}\n`);
+
+    try {
+      await cmdCheckCompletions(flags);
+    } catch (error) {
+      log.error(`Completion check failed: ${error.message}`);
     }
   });
 
@@ -792,10 +807,10 @@ Commands:
   score         Score all unscored bounties for viral potential
   draft         Generate tweet drafts for high-scoring bounties
   post          Post the next draft tweet to Twitter/X
+  auto          Run the full pipeline (scan → score → draft → post)
   completions   Check posted bounties for completions & post success stories
   recap         Generate and post a daily recap tweet
-  auto          Run the full pipeline (scan → score → draft → post → completions)
-  cron          Start the scheduled auto-runner & launch web server
+  cron          Hourly bounty pipeline + 3h completion check + web server
   server        Start the web server dashboard only
   status        Show database stats and pending drafts
   verify        Verify Twitter API credentials

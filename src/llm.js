@@ -179,7 +179,7 @@ export async function generateTweetWithLLM(bounty, scores) {
     rewardText = `${rewardAmount} ${currency}`;
   }
 
-  const prompt = `You are a professional degen copywriter running @BountyFeedHQ.
+  const prompt = `You are a professional degen copywriter running @BountyFeedHQ on Twitter.
 Your job is to write an engaging, hilarious, and viral tweet about a real-world task/bounty on pump.fun GO.
 
 Bounty details:
@@ -192,14 +192,16 @@ Curation Scores:
 - Absurdity Scale: ${scores.absurdityScore}/100
 - LLM Reasoning: "${scores.reasoning || ''}"
 
-Instructions:
-1. Write in a funny, slightly sarcastic, and engaging crypto/degen culture tone (use lowercase, degen slang like "anon", "ser", "gm", emojis like 💀, 😂, 👀, 🚨).
-2. Highlight why this is hilarious, absurd, or a massive bag. Always use the formatted reward amount exactly as provided above (e.g. "$23,000 in $SOL") when mentioning the reward. Do NOT invent or change the reward amount.
-3. If the viral score is very high (>= 80), you can write a short 2-3 tweet thread. Otherwise, write a single tweet.
-4. Keep the single tweet or individual thread parts under 280 characters.
-5. DO NOT include any URLs or links in the tweet. The link will be posted separately as a reply.
-6. Include 1-2 relevant hashtags like #PumpFunGO, #Solana at the end.
-7. The tweet should feel natural and punchy, not like a bot. Vary your style — don't always start the same way.
+CRITICAL RULES:
+1. NEVER start the tweet with "gm", "gm anon", "gm degens", or "ser". These are banned openers. Use completely varied, creative openings every time. Examples of good openers: "bro what 😭", "no way this is real", "i can't make this up", "okay which one of you", "new bounty just dropped 🚨", the reward amount, or jump straight into the bounty title.
+2. Write in a funny, slightly sarcastic, crypto/degen culture tone (lowercase, emojis like 💀, 😭, 👀, 🚨, 🤯, 💰). But do NOT overuse "anon" or "ser" — use them sparingly.
+3. Always use the formatted reward amount EXACTLY as provided above (e.g. "${rewardText}"). Do NOT invent or change the reward amount.
+4. If the viral score is very high (>= 80), write a 2-3 tweet thread. Otherwise, write a single tweet.
+5. For THREADS: The 2nd tweet MUST contain actual details about the bounty — what exactly needs to be done, any deliverables, requirements, or conditions mentioned in the description. Do NOT write generic filler like "this is a bag" or "someone's gonna get this". Break down the actual task.
+6. Keep the single tweet or individual thread parts under 280 characters.
+7. DO NOT include any URLs or links. The link will be posted separately.
+8. Include 1-2 relevant hashtags like #PumpFunGO, #Solana at the end.
+9. Vary your style significantly — sometimes lead with the reward amount, sometimes with the task, sometimes with a reaction. Never follow the same pattern twice.
 
 Return ONLY a raw JSON object with this structure:
 {
@@ -209,7 +211,7 @@ Return ONLY a raw JSON object with this structure:
 OR for threads:
 {
   "type": "thread",
-  "text": "First tweet content here\\n---THREAD_SEPARATOR---\\nSecond tweet content here"
+  "text": "First tweet content here\\n---THREAD_SEPARATOR---\\nSecond tweet with ACTUAL bounty details/deliverables"
 }`;
 
   const responseText = await callGroqAPI([

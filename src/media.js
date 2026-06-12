@@ -205,21 +205,111 @@ async function screenshotBountyPage(url, filename) {
 }
 
 /**
- * Get media for a bounty: download image if available, otherwise screenshot the page.
- * @param {Object} draft - Draft tweet object with image_url and source_url fields
+ * Generate a fun AI image for a bounty using Pollinations.ai (free, no API key).
+ * Creates a funny, vibrant illustration related to the bounty task.
+ *
+ * @param {string} bountyTitle - Title of the bounty
+ * @param {string} bountyId - ID for filename
+ * @returns {Promise<{path: string, buffer: Buffer, mimeType: string} | null>}
+ */
+async function generateAIImage(bountyTitle, bountyId) {
+  try {
+    // Create a creative prompt based on the bounty title
+    const cleanTitle = (bountyTitle || 'crypto bounty task')
+      .replace(/[^a-zA-Z0-9 ]/g, '')
+      .slice(0, 100);
+
+    const artStyles = [
+      'funny cartoon illustration, vibrant colors, meme style, exaggerated expressions',
+      'comedic digital art, bright neon colors, pop art style, humorous',
+      'funny 3D render, colorful, playful, exaggerated proportions, comedic scene',
+      'hilarious editorial illustration, bold colors, dynamic composition, satirical',
+      'meme-worthy digital painting, vibrant, over-the-top, comedic',
+    ];
+    const style = artStyles[Math.floor(Math.random() * artStyles.length)];
+
+    const prompt = `${cleanTitle}, ${style}, no text overlay, no watermark`;
+    const encodedPrompt = encodeURIComponent(prompt);
+    const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=576&seed=${Date.now()}&nologo=true`;
+
+    log.info(`🎨 Generating AI image for: "${cleanTitle.slice(0, 50)}..."`);
+
+    return new Promise((resolve) => {
+      const request = https.get(url, { timeout: 30000 }, (res) => {
+        // Follow redirects
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          https.get(res.headers.location, { timeout: 30000 }, (redirectRes) => {
+            handleImageResponse(redirectRes, bountyId, resolve);
+          }).on('error', () => resolve(null)).on('timeout', function() { this.destroy(); resolve(null); });
+          return;
+        }
+
+        handleImageResponse(res, bountyId, resolve);
+      });
+
+      request.on('error', (err) => {
+        log.warn(`AI image generation error: ${err.message}`);
+        resolve(null);
+      });
+
+      request.on('timeout', () => {
+        request.destroy();
+        log.warn('AI image generation timeout');
+        resolve(null);
+      });
+    });
+  } catch (err) {
+    log.warn(`AI image generation failed: ${err.message}`);
+    return null;
+  }
+}
+
+function handleImageResponse(res, bountyId, resolve) {
+  if (res.statusCode !== 200) {
+    log.warn(`AI image generation HTTP ${res.statusCode}`);
+    resolve(null);
+    return;
+  }
+
+  const contentType = res.headers['content-type'] || 'image/jpeg';
+  const ext = contentType.includes('png') ? '.png' : '.jpg';
+  const chunks = [];
+
+  res.on('data', (chunk) => chunks.push(chunk));
+  res.on('end', () => {
+    const buffer = Buffer.concat(chunks);
+    if (buffer.length < 5000) {
+      log.warn(`AI image too small (${buffer.length} bytes), skipping`);
+      resolve(null);
+      return;
+    }
+    const filePath = join(MEDIA_DIR, `ai_${bountyId}${ext}`);
+    writeFileSync(filePath, buffer);
+    log.info(`✅ AI image generated: ${filePath} (${(buffer.length / 1024).toFixed(1)}KB)`);
+    resolve({ path: filePath, buffer, mimeType: contentType });
+  });
+  res.on('error', () => resolve(null));
+}
+
+/**
+ * Get media for a bounty: download image if available, generate AI image, or screenshot.
+ * @param {Object} draft - Draft tweet object with image_url, source_url, and bounty_title fields
  * @returns {Promise<{path: string, buffer: Buffer, mimeType: string} | null>}
  */
 export async function getBountyMedia(draft) {
   const bountyId = (draft.bounty_id || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
   
-  // Check if we already have a cached image
-  const cachedFiles = ['jpg', 'png', 'webp'].map(ext => join(MEDIA_DIR, `${bountyId}.${ext}`));
-  for (const cached of cachedFiles) {
-    if (existsSync(cached)) {
-      log.info(`Using cached media: ${cached}`);
-      const buffer = readFileSync(cached);
-      const mimeType = cached.endsWith('.png') ? 'image/png' : cached.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
-      return { path: cached, buffer, mimeType };
+  // Check if we already have a cached image (including AI-generated)
+  const cachedPatterns = ['', 'ai_'];
+  for (const prefix of cachedPatterns) {
+    const cachedFiles = ['jpg', 'png', 'webp'].map(ext => join(MEDIA_DIR, `${prefix}${bountyId}.${ext}`));
+    for (const cached of cachedFiles) {
+      if (existsSync(cached)) {
+        log.info(`Using cached media: ${cached}`);
+        const buffer = readFileSync(cached);
+        const mimeType = cached.endsWith('.png') ? 'image/png' : cached.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+        return { path: cached, buffer, mimeType };
+      }
     }
   }
 
@@ -230,9 +320,17 @@ export async function getBountyMedia(draft) {
     if (result) return result;
   }
 
-  // Strategy 2: Take a screenshot of the bounty page
+  // Strategy 2: Generate a funny AI image based on the bounty title
+  const bountyTitle = draft.bounty_title || draft.title || '';
+  if (bountyTitle.length > 3) {
+    log.info('🎨 No bounty image — generating AI image...');
+    const aiResult = await generateAIImage(bountyTitle, bountyId);
+    if (aiResult) return aiResult;
+  }
+
+  // Strategy 3: Take a screenshot of the bounty page (last resort)
   if (draft.source_url && draft.source_url.length > 10) {
-    log.info(`No image available, taking screenshot of bounty page...`);
+    log.info('📸 AI image failed — falling back to page screenshot...');
     const result = await screenshotBountyPage(draft.source_url, bountyId);
     if (result) return result;
   }
