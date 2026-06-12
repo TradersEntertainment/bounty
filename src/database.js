@@ -118,6 +118,22 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_scores_viral ON scores(viral_score DESC);
     CREATE INDEX IF NOT EXISTS idx_tweets_status ON tweets(status);
     CREATE INDEX IF NOT EXISTS idx_tweets_date ON tweets(created_at);
+
+    CREATE TABLE IF NOT EXISTS completions (
+      bounty_id TEXT PRIMARY KEY,
+      winner_username TEXT,
+      winner_media_url TEXT,
+      winner_media_type TEXT DEFAULT 'image',
+      winner_description TEXT,
+      original_tweet_id TEXT,
+      completion_tweet_id TEXT,
+      status TEXT DEFAULT 'detected',
+      detected_at TEXT NOT NULL,
+      posted_at TEXT,
+      FOREIGN KEY (bounty_id) REFERENCES bounties(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_completions_status ON completions(status);
   `);
 
   // Retroactively add reward_usd if it doesn't exist
@@ -415,6 +431,74 @@ export function updateDailyStats(stats) {
 export function getTodayStats() {
   const today = new Date().toISOString().split('T')[0];
   return db.prepare('SELECT * FROM daily_stats WHERE date = ?').get(today);
+}
+
+// ─── Completion Operations ──────────────────────────────────────────
+
+/**
+ * Insert a new bounty completion record.
+ */
+export function insertCompletion(data) {
+  const stmt = db.prepare(`
+    INSERT OR IGNORE INTO completions (bounty_id, winner_username, winner_media_url, winner_media_type,
+      winner_description, original_tweet_id, status, detected_at)
+    VALUES (@bounty_id, @winner_username, @winner_media_url, @winner_media_type,
+      @winner_description, @original_tweet_id, 'detected', @detected_at)
+  `);
+
+  return stmt.run({
+    bounty_id: data.bountyId,
+    winner_username: data.winnerUsername || '',
+    winner_media_url: data.winnerMediaUrl || '',
+    winner_media_type: data.winnerMediaType || 'image',
+    winner_description: data.winnerDescription || '',
+    original_tweet_id: data.originalTweetId || '',
+    detected_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Get bounties we've tweeted about that haven't been checked for completion yet.
+ * Returns bounties that have a posted tweet but no entry in the completions table.
+ */
+export function getPostedBountiesForCompletionCheck() {
+  return db.prepare(`
+    SELECT b.*, t.twitter_id as original_twitter_id, t.tweet_text,
+           s.viral_score, s.reward_score
+    FROM bounties b
+    INNER JOIN tweets t ON b.id = t.bounty_id
+    LEFT JOIN scores s ON b.id = s.bounty_id
+    LEFT JOIN completions c ON b.id = c.bounty_id
+    WHERE t.status = 'posted'
+      AND t.twitter_id IS NOT NULL
+      AND c.bounty_id IS NULL
+    ORDER BY t.posted_at DESC
+  `).all();
+}
+
+/**
+ * Get detected completions that haven't been posted as success story tweets yet.
+ */
+export function getUnpostedCompletions(limit = 5) {
+  return db.prepare(`
+    SELECT c.*, b.title, b.reward_amount, b.reward_currency, b.reward_usd,
+           b.source_url, b.image_url
+    FROM completions c
+    INNER JOIN bounties b ON c.bounty_id = b.id
+    WHERE c.status = 'detected'
+    ORDER BY c.detected_at DESC
+    LIMIT ?
+  `).all(limit);
+}
+
+/**
+ * Mark a completion as posted with the success story tweet ID.
+ */
+export function markCompletionPosted(bountyId, completionTweetId) {
+  db.prepare(`
+    UPDATE completions SET status = 'posted', completion_tweet_id = ?, posted_at = ?
+    WHERE bounty_id = ?
+  `).run(completionTweetId, new Date().toISOString(), bountyId);
 }
 
 /**

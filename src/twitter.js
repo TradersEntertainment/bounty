@@ -85,6 +85,11 @@ export async function postTweet(text, options = {}) {
       tweetPayload.media = { media_ids: [options.mediaId] };
     }
 
+    // Add quote tweet reference if provided (for success story posts)
+    if (options.quoteTweetId) {
+      tweetPayload.quote_tweet_id = options.quoteTweetId;
+    }
+
     const result = await twitterClient.v2.tweet(tweetPayload);
 
     log.info(`Tweet posted successfully: ${result.data.id}`);

@@ -240,3 +240,92 @@ export async function getBountyMedia(draft) {
   log.warn(`No media available for bounty ${bountyId}`);
   return null;
 }
+
+/**
+ * Download media from a submission (winner's video or image).
+ * Used for success story / completion tweets.
+ *
+ * @param {string} mediaUrl - URL of the media to download
+ * @param {string} mediaType - 'video' or 'image'
+ * @param {string} bountyId - Bounty ID for filename
+ * @returns {Promise<{path: string, buffer: Buffer, mimeType: string} | null>}
+ */
+export async function downloadSubmissionMedia(mediaUrl, mediaType, bountyId) {
+  if (!mediaUrl || mediaUrl.length < 10) {
+    log.warn('No submission media URL provided');
+    return null;
+  }
+
+  const safeId = (bountyId || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const filename = `completion_${safeId}`;
+
+  log.info(`📥 Downloading submission ${mediaType}: ${mediaUrl}`);
+
+  return new Promise((resolve) => {
+    const protocol = mediaUrl.startsWith('https') ? https : http;
+
+    const request = protocol.get(mediaUrl, { timeout: 30000 }, (res) => {
+      // Follow redirects
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return downloadSubmissionMedia(res.headers.location, mediaType, bountyId).then(resolve);
+      }
+
+      if (res.statusCode !== 200) {
+        log.warn(`Submission media download failed: HTTP ${res.statusCode}`);
+        resolve(null);
+        return;
+      }
+
+      const contentType = res.headers['content-type'] || '';
+      let ext = '.jpg';
+      let mimeType = 'image/jpeg';
+
+      if (mediaType === 'video' || contentType.includes('video')) {
+        ext = contentType.includes('webm') ? '.webm' : '.mp4';
+        mimeType = contentType.includes('webm') ? 'video/webm' : 'video/mp4';
+      } else {
+        if (contentType.includes('png')) { ext = '.png'; mimeType = 'image/png'; }
+        else if (contentType.includes('webp')) { ext = '.webp'; mimeType = 'image/webp'; }
+        else if (contentType.includes('gif')) { ext = '.gif'; mimeType = 'image/gif'; }
+        else { ext = '.jpg'; mimeType = 'image/jpeg'; }
+      }
+
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => {
+        const buffer = Buffer.concat(chunks);
+
+        // Skip if too small (likely an error page)
+        if (buffer.length < 1000) {
+          log.warn(`Submission media too small (${buffer.length} bytes), skipping`);
+          resolve(null);
+          return;
+        }
+
+        // Skip if video is too large for Twitter (> 15MB for now)
+        if (mediaType === 'video' && buffer.length > 15 * 1024 * 1024) {
+          log.warn(`Video too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB), skipping upload`);
+          resolve(null);
+          return;
+        }
+
+        const filePath = join(MEDIA_DIR, `${filename}${ext}`);
+        writeFileSync(filePath, buffer);
+        log.info(`✅ Submission media downloaded: ${filePath} (${(buffer.length / 1024).toFixed(1)}KB)`);
+        resolve({ path: filePath, buffer, mimeType });
+      });
+      res.on('error', () => resolve(null));
+    });
+
+    request.on('error', (err) => {
+      log.warn(`Submission media download error: ${err.message}`);
+      resolve(null);
+    });
+
+    request.on('timeout', () => {
+      request.destroy();
+      log.warn(`Submission media download timeout for ${mediaUrl}`);
+      resolve(null);
+    });
+  });
+}

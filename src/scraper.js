@@ -784,6 +784,145 @@ async function clickLoadMore(page) {
 }
 
 /**
+ * Check if a specific bounty has been completed (has a winner).
+ * Navigates to the bounty detail page and looks for approved/winner submissions.
+ *
+ * @param {string} bountyUrl - The bounty detail URL (e.g., https://pump.fun/go/{uuid})
+ * @param {Object} options - Scraper options
+ * @returns {{ completed: boolean, winner: Object|null }}
+ */
+export async function checkBountyCompletion(bountyUrl, options = {}) {
+  const config = { ...DEFAULT_CONFIG, ...options };
+  let browser, context;
+
+  try {
+    ({ browser, context } = await createBrowser(config));
+    const page = await context.newPage();
+
+    log.info(`🔍 Checking completion: ${bountyUrl}`);
+    await page.goto(bountyUrl, { waitUntil: 'domcontentloaded', timeout: config.timeout });
+
+    // Wait for content to load
+    await page.waitForTimeout(3000);
+
+    // Dismiss any modals/popups
+    const dismissButtons = [
+      'button:has-text("Continue")',
+      'button:has-text("Get started")',
+      'button:has-text("Accept")',
+      'button:has-text("Agree")',
+    ];
+    for (const selector of dismissButtons) {
+      try {
+        const btn = await page.$(selector);
+        if (btn) {
+          await btn.click();
+          await page.waitForTimeout(1000);
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Extract completion data from the bounty detail page
+    const completionData = await page.evaluate(() => {
+      const fullText = document.body.textContent || '';
+      const fullTextLower = fullText.toLowerCase();
+
+      // Check if bounty is completed/closed/ended
+      const isCompleted = fullTextLower.includes('completed') ||
+        fullTextLower.includes('winner') ||
+        fullTextLower.includes('won') ||
+        fullTextLower.includes('approved') ||
+        fullTextLower.includes('claimed') ||
+        fullTextLower.includes('ended') ||
+        fullTextLower.includes('closed');
+
+      if (!isCompleted) {
+        return { completed: false, winner: null };
+      }
+
+      // Try to find the winner/approved submission
+      // Look for submission cards with winner/approved status
+      const allCards = document.querySelectorAll('[class*="card"], [class*="Card"], article, [role="listitem"], [class*="submission"], [class*="Submission"]');
+      
+      let winnerCard = null;
+      for (const card of allCards) {
+        const cardText = (card.textContent || '').toLowerCase();
+        if (cardText.includes('winner') || cardText.includes('approved') || cardText.includes('accepted') || cardText.includes('won')) {
+          winnerCard = card;
+          break;
+        }
+      }
+
+      let winner = null;
+      if (winnerCard) {
+        // Extract winner username
+        const userEl = winnerCard.querySelector('[class*="user"], [class*="User"], [class*="author"], [class*="submitter"], [class*="name"], [class*="Name"]');
+        const username = userEl?.textContent?.trim() || '';
+
+        // Extract media (prefer video over image)
+        const videoEl = winnerCard.querySelector('video, video source, [class*="video"], [class*="Video"]');
+        const imgEl = winnerCard.querySelector('img:not([class*="avatar"]):not([class*="icon"]):not([class*="logo"])');
+
+        let mediaUrl = '';
+        let mediaType = '';
+        if (videoEl) {
+          mediaUrl = videoEl.src || videoEl.querySelector?.('source')?.src || '';
+          mediaType = 'video';
+        } else if (imgEl) {
+          mediaUrl = imgEl.src || '';
+          mediaType = 'image';
+        }
+
+        // Extract description
+        const descEl = winnerCard.querySelector('p, [class*="desc"], [class*="content"], [class*="text"]');
+        const description = descEl?.textContent?.trim() || '';
+
+        winner = { username, mediaUrl, mediaType, description };
+      }
+
+      // If no specific winner card found, still look for any submission media on the page
+      if (!winner) {
+        // Look for any video/image that could be a submission
+        const anyVideo = document.querySelector('video:not([class*="hero"]), video source');
+        const anySubmissionImg = document.querySelector('[class*="submission"] img, [class*="Submission"] img');
+        
+        if (anyVideo) {
+          winner = {
+            username: '',
+            mediaUrl: anyVideo.src || anyVideo.querySelector?.('source')?.src || '',
+            mediaType: 'video',
+            description: '',
+          };
+        } else if (anySubmissionImg) {
+          winner = {
+            username: '',
+            mediaUrl: anySubmissionImg.src || '',
+            mediaType: 'image',
+            description: '',
+          };
+        }
+      }
+
+      return {
+        completed: true,
+        winner: winner && winner.mediaUrl ? winner : null,
+      };
+    });
+
+    log.info(`📋 Completion check result for ${bountyUrl}: completed=${completionData.completed}, hasWinner=${!!completionData.winner}`);
+    return completionData;
+
+  } catch (error) {
+    log.error(`Completion check failed for ${bountyUrl}: ${error.message}`);
+    return { completed: false, winner: null };
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+  }
+}
+
+/**
  * Take a screenshot for debugging purposes.
  */
 export async function debugScreenshot(page, name = 'debug') {

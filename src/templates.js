@@ -229,6 +229,50 @@ another day in the degen economy 📈
 
 #PumpFunGO #Solana #Crypto`,
   ],
+
+  success_story: [
+    (b) => `🏆 someone actually did it and earned ${b.reward}
+
+proof is right here 👇
+
+#PumpFunGO #Solana`,
+
+    (b) => `this absolute legend just earned ${b.reward} 💰
+
+pump.fun GO is paying people for real. 👀
+
+#PumpFunGO #Solana`,
+
+    (b) => `they said it couldn't be done 💀
+
+${b.reward} — claimed ✅
+
+#PumpFunGO #Solana`,
+
+    (b) => `another bag secured 💰
+
+${b.reward} earned on @PumpFunGO
+
+this is proof people are actually getting paid 🫡
+
+#PumpFunGO #Solana`,
+
+    (b) => `THE MADLAD ACTUALLY DID IT 😭
+
+${b.reward} collected. just like that.
+
+@PumpFunGO hits different
+
+#PumpFunGO #Solana`,
+
+    (b) => `${b.reward} earned ✅
+
+from a bounty we posted about 👆
+
+degens stay winning on @PumpFunGO
+
+#PumpFunGO #Solana`,
+  ],
 };
 
 // ─── Template Selection ──────────────────────────────────────────────
@@ -370,6 +414,36 @@ Check out this bounty and claim that bag: ${data.url}
   ];
 
   return thread.map(t => enforceCharLimit(t));
+}
+
+/**
+ * Generate a success story tweet for a completed bounty.
+ * This will be posted as a quote tweet referencing our original bounty tweet.
+ *
+ * @param {Object} bounty - The bounty object from the database
+ * @param {Object} completion - The completion record with winner info
+ * @returns {{ text: string, templateUsed: string }}
+ */
+export function generateSuccessStoryTweet(bounty, completion) {
+  const templates = TEMPLATES.success_story;
+  const template = pickRandom(templates);
+  const templateIndex = templates.indexOf(template);
+
+  const rewardDisplay = buildRewardDisplay(bounty);
+
+  const data = {
+    title: truncateTitle(bounty.title || 'Untitled Bounty', 80),
+    reward: rewardDisplay,
+    winner: completion.winner_username || 'a legend',
+  };
+
+  let text = template(data);
+  let finalText = enforceCharLimit(text);
+
+  return {
+    text: finalText,
+    templateUsed: `success_story_${templateIndex}`,
+  };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────

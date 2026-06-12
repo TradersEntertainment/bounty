@@ -29,14 +29,16 @@ import {
   getActiveBounties, getRecentBounties, getTopScoredBounties,
   saveTweetDraft, markTweetPosted, markTweetFailed,
   getTodayTweetCount, bountyHasTweet, updateDailyStats, getTodayStats,
+  insertCompletion, getPostedBountiesForCompletionCheck,
+  getUnpostedCompletions, markCompletionPosted,
 } from './database.js';
-import { scrapeBounties, scrapeSubmissions, scrapeAll } from './scraper.js';
+import { scrapeBounties, scrapeSubmissions, scrapeAll, checkBountyCompletion } from './scraper.js';
 import { scoreBounty, categorizeBounty, formatScoreSummary } from './scorer.js';
-import { generateTweet, generateRecapTweet, generateThread } from './templates.js';
+import { generateTweet, generateRecapTweet, generateThread, generateSuccessStoryTweet } from './templates.js';
 import { filterBounty, filterTweet, getFilterStats } from './filter.js';
 import { postTweet, postThread, verifyCredentials, initTwitterClient, uploadMedia } from './twitter.js';
 import { sendTelegramMessage, sendTelegramPhoto } from './telegram.js';
-import { getBountyMedia } from './media.js';
+import { getBountyMedia, downloadSubmissionMedia } from './media.js';
 import { startServer } from './server.js';
 import { generateTweetWithLLM } from './llm.js';
 
@@ -410,6 +412,158 @@ async function cmdPost(flags) {
 }
 
 /**
+ * CHECK COMPLETIONS: Check previously tweeted bounties for completions and post success stories.
+ * Flow: Find posted bounties → Check each for completion → Download winner media → Quote tweet original
+ */
+async function cmdCheckCompletions(flags) {
+  log.info('🏆 Checking for completed bounties...');
+
+  const postedBounties = getPostedBountiesForCompletionCheck();
+  log.info(`Found ${postedBounties.length} posted bounties to check for completions`);
+
+  if (postedBounties.length === 0) {
+    return { detected: 0, posted: 0 };
+  }
+
+  // Limit how many bounties we check per run to avoid long scraping sessions
+  const checkLimit = Math.min(flags.limit || 5, postedBounties.length);
+  const toCheck = postedBounties.slice(0, checkLimit);
+
+  let detected = 0;
+
+  for (const bounty of toCheck) {
+    if (!bounty.source_url || bounty.source_url.length < 10) {
+      log.warn(`Skipping bounty "${bounty.title}" — no valid source URL`);
+      continue;
+    }
+
+    try {
+      const result = await checkBountyCompletion(bounty.source_url);
+
+      if (result.completed && result.winner) {
+        log.info(`✅ Completion detected: "${bounty.title}" — winner: ${result.winner.username || 'unknown'}`);
+
+        insertCompletion({
+          bountyId: bounty.id,
+          winnerUsername: result.winner.username,
+          winnerMediaUrl: result.winner.mediaUrl,
+          winnerMediaType: result.winner.mediaType,
+          winnerDescription: result.winner.description,
+          originalTweetId: bounty.original_twitter_id,
+        });
+
+        detected++;
+      } else if (result.completed) {
+        log.info(`📋 Bounty "${bounty.title}" appears completed but no winner media found`);
+        // Still record it so we don't re-check, but with no media
+        insertCompletion({
+          bountyId: bounty.id,
+          winnerUsername: '',
+          winnerMediaUrl: '',
+          winnerMediaType: '',
+          winnerDescription: '',
+          originalTweetId: bounty.original_twitter_id,
+        });
+        detected++;
+      }
+    } catch (err) {
+      log.error(`Error checking completion for "${bounty.title}": ${err.message}`);
+    }
+
+    // Be respectful — wait between page loads
+    await sleep(2000);
+  }
+
+  log.info(`🔍 Completion check done: ${detected} completions detected out of ${toCheck.length} checked`);
+
+  // Now post success story tweets for any unposted completions
+  let posted = 0;
+
+  if (flags.dryRun) {
+    const unposted = getUnpostedCompletions(5);
+    if (unposted.length > 0) {
+      log.info('🏃 DRY RUN — Success story tweets not actually posted:');
+      for (const completion of unposted) {
+        const { text } = generateSuccessStoryTweet(completion, completion);
+        console.log(`\n${'─'.repeat(50)}`);
+        console.log(`[Quote Tweet of: ${completion.original_tweet_id}]`);
+        console.log(text);
+        console.log(`${'─'.repeat(50)}`);
+      }
+    }
+    return { detected, posted: 0 };
+  }
+
+  const unpostedCompletions = getUnpostedCompletions(flags.limit || 1);
+
+  for (const completion of unpostedCompletions) {
+    // Skip if no original tweet ID to quote
+    if (!completion.original_tweet_id) {
+      log.warn(`Skipping success story for "${completion.title}" — no original tweet ID to quote`);
+      continue;
+    }
+
+    // Generate success story tweet text
+    const { text, templateUsed } = generateSuccessStoryTweet(completion, completion);
+
+    log.info(`📤 Posting success story for: "${completion.title}"`);
+    console.log(`\n${'─'.repeat(50)}`);
+    console.log(`[Quote Tweet of: ${completion.original_tweet_id}]`);
+    console.log(text);
+    console.log(`${'─'.repeat(50)}\n`);
+
+    // Download winner's media if available
+    let mediaId = null;
+    if (completion.winner_media_url) {
+      try {
+        const media = await downloadSubmissionMedia(
+          completion.winner_media_url,
+          completion.winner_media_type,
+          completion.bounty_id
+        );
+        if (media) {
+          log.info(`📸 Uploading winner media to Twitter (${(media.buffer.length / 1024).toFixed(1)}KB)...`);
+          const uploadResult = await uploadMedia(media.buffer, media.mimeType);
+          if (uploadResult.success) {
+            mediaId = uploadResult.mediaId;
+            log.info(`✅ Winner media uploaded: ${mediaId}`);
+          } else {
+            log.warn(`⚠️ Winner media upload failed: ${uploadResult.error}`);
+          }
+        }
+      } catch (err) {
+        log.warn(`⚠️ Winner media processing error: ${err.message}`);
+      }
+    }
+
+    // Post the quote tweet
+    const tweetResult = await postTweet(text, {
+      mediaId,
+      quoteTweetId: completion.original_tweet_id,
+    });
+
+    if (tweetResult.success) {
+      markCompletionPosted(completion.bounty_id, tweetResult.tweetId);
+      log.info(`✅ Success story posted! Tweet ID: ${tweetResult.tweetId}`);
+
+      // Also send to Telegram
+      const telegramText = `🏆 Success Story!\n\n${text}\n\n📎 Original: https://x.com/i/web/status/${completion.original_tweet_id}`;
+      await sendTelegramMessage(telegramText);
+
+      posted++;
+    } else {
+      log.error(`❌ Success story posting failed: ${tweetResult.error}`);
+    }
+
+    // Rate limit respect
+    await sleep(3000);
+  }
+
+  log.info(`✅ Success stories: ${detected} detected, ${posted} posted`);
+  return { detected, posted };
+}
+
+/**
  * RECAP: Generate and post a daily recap tweet.
  */
 async function cmdRecap(flags) {
@@ -472,7 +626,7 @@ async function cmdRecap(flags) {
 }
 
 /**
- * AUTO: Run the full pipeline — scan → score → draft → post.
+ * AUTO: Run the full pipeline — scan → score → draft → post → check completions.
  */
 async function cmdAuto(flags) {
   log.info('🤖 Starting auto pipeline...');
@@ -484,11 +638,15 @@ async function cmdAuto(flags) {
   const shouldPost = flags.auto || process.env.AUTO_POST === 'true';
 
   let postResult = { posted: 0 };
+  let completionResult = { detected: 0, posted: 0 };
   if (shouldPost) {
     // When running automatically in the pipeline, post only 1 tweet per run
     // to distribute posts evenly across cron schedules
     const postFlags = { ...flags, limit: 1 };
     postResult = await cmdPost(postFlags);
+
+    // Check for completed bounties and post success stories
+    completionResult = await cmdCheckCompletions(flags);
   } else {
     log.info('📝 Draft mode — tweets saved but not posted. Use --auto to post.');
     const drafts = getDraftTweets(5);
@@ -505,6 +663,8 @@ async function cmdAuto(flags) {
   log.info(`  Bounties scored: ${scoreResult.scored}`);
   log.info(`  Tweets drafted: ${draftResult.drafted}`);
   log.info(`  Tweets posted: ${postResult.posted}`);
+  log.info(`  Completions detected: ${completionResult.detected}`);
+  log.info(`  Success stories posted: ${completionResult.posted}`);
 }
 
 /**
@@ -628,16 +788,17 @@ function showHelp() {
 Usage: node src/index.js <command> [flags]
 
 Commands:
-  scan        Scrape pump.fun/go for new bounties
-  score       Score all unscored bounties for viral potential
-  draft       Generate tweet drafts for high-scoring bounties
-  post        Post the next draft tweet to Twitter/X
-  recap       Generate and post a daily recap tweet
-  auto        Run the full pipeline (scan → score → draft → post)
-  cron        Start the scheduled auto-runner & launch web server
-  server      Start the web server dashboard only
-  status      Show database stats and pending drafts
-  verify      Verify Twitter API credentials
+  scan          Scrape pump.fun/go for new bounties
+  score         Score all unscored bounties for viral potential
+  draft         Generate tweet drafts for high-scoring bounties
+  post          Post the next draft tweet to Twitter/X
+  completions   Check posted bounties for completions & post success stories
+  recap         Generate and post a daily recap tweet
+  auto          Run the full pipeline (scan → score → draft → post → completions)
+  cron          Start the scheduled auto-runner & launch web server
+  server        Start the web server dashboard only
+  status        Show database stats and pending drafts
+  verify        Verify Twitter API credentials
 
 Flags:
   --dry-run, -n    Simulate without posting to Twitter
@@ -650,6 +811,7 @@ Examples:
   node src/index.js scan                # Scrape new bounties
   node src/index.js auto --dry-run      # Full pipeline, no posting
   node src/index.js auto --auto         # Full pipeline with auto-posting
+  node src/index.js completions         # Check & post success stories
   node src/index.js cron --auto         # Scheduled with auto-posting
   node src/index.js post --limit 3      # Post next 3 drafts
   node src/index.js status              # Show dashboard
@@ -731,7 +893,7 @@ async function main() {
   }
 
   // Initialize Twitter client (for commands that need it)
-  if (['post', 'auto', 'cron', 'recap', 'verify'].includes(command)) {
+  if (['post', 'auto', 'cron', 'recap', 'verify', 'completions'].includes(command)) {
     initTwitterClient();
   }
 
@@ -754,6 +916,9 @@ async function main() {
         break;
       case 'auto':
         await cmdAuto(flags);
+        break;
+      case 'completions':
+        await cmdCheckCompletions(flags);
         break;
       case 'cron':
         await cmdCron(flags);
