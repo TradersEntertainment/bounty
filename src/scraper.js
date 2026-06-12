@@ -785,7 +785,14 @@ async function clickLoadMore(page) {
 
 /**
  * Check if a specific bounty has been completed (has a winner).
- * Navigates to the bounty detail page and looks for approved/winner submissions.
+ * 
+ * STRICT DETECTION: Only returns completed=true when:
+ * 1. The bounty status badge is NOT "Open" (must be Closed/Completed/Ended)
+ * 2. A submission card has an explicit "Winner" badge element
+ * 3. The submission shows "Awarded" + "Claimed" indicators
+ * 
+ * This prevents false positives from pages that say "One winner" in reward
+ * distribution descriptions or have "Submission" badges.
  *
  * @param {string} bountyUrl - The bounty detail URL (e.g., https://pump.fun/go/{uuid})
  * @param {Object} options - Scraper options
@@ -822,54 +829,114 @@ export async function checkBountyCompletion(bountyUrl, options = {}) {
       } catch { /* ignore */ }
     }
 
-    // Extract completion data from the bounty detail page
+    // Extract completion data from the bounty detail page — STRICT detection
     const completionData = await page.evaluate(() => {
-      const fullText = document.body.textContent || '';
-      const fullTextLower = fullText.toLowerCase();
+      // ─── Step 1: Check if bounty is still Open ─────────────────────
+      // Look for status badges. On pump.fun/go, the bounty status is shown
+      // as a colored badge: "Open" (green), "Closed", "Completed", "Ended"
+      const allElements = document.querySelectorAll('*');
+      let bountyStatus = '';
 
-      // Check if bounty is completed/closed/ended
-      const isCompleted = fullTextLower.includes('completed') ||
-        fullTextLower.includes('winner') ||
-        fullTextLower.includes('won') ||
-        fullTextLower.includes('approved') ||
-        fullTextLower.includes('claimed') ||
-        fullTextLower.includes('ended') ||
-        fullTextLower.includes('closed');
+      // Look for status badge elements
+      for (const el of allElements) {
+        const text = (el.textContent || '').trim().toLowerCase();
+        const classList = (el.className || '').toLowerCase();
 
-      if (!isCompleted) {
-        return { completed: false, winner: null };
-      }
-
-      // Try to find the winner/approved submission
-      // Look for submission cards with winner/approved status
-      const allCards = document.querySelectorAll('[class*="card"], [class*="Card"], article, [role="listitem"], [class*="submission"], [class*="Submission"]');
-      
-      let winnerCard = null;
-      for (const card of allCards) {
-        const cardText = (card.textContent || '').toLowerCase();
-        if (cardText.includes('winner') || cardText.includes('approved') || cardText.includes('accepted') || cardText.includes('won')) {
-          winnerCard = card;
+        // Status badges are typically small elements with specific classes
+        if ((classList.includes('badge') || classList.includes('status') || classList.includes('tag') || classList.includes('chip') || classList.includes('label')) &&
+            (text === 'open' || text === 'closed' || text === 'completed' || text === 'ended' || text === 'expired')) {
+          bountyStatus = text;
           break;
         }
       }
 
+      // If the bounty is explicitly "Open", it's NOT completed — skip
+      if (bountyStatus === 'open') {
+        return { completed: false, winner: null, reason: 'Bounty status is Open' };
+      }
+
+      // ─── Step 2: Look for ACTUAL Winner badges on submission cards ──
+      // On pump.fun/go, winner submissions have a distinct "Winner" badge
+      // element (green/gold, positioned in top-right of the card).
+      // Regular submissions only show "Submission" badge.
+      // We must find elements where the text content is exactly/close to "Winner"
+      
+      let winnerBadgeFound = false;
+      let winnerCard = null;
+
+      // Search for elements that are winner badges
+      for (const el of allElements) {
+        const text = (el.textContent || '').trim();
+        const textLower = text.toLowerCase();
+
+        // Match elements where the text is specifically "Winner" (not "One winner", not part of longer text)
+        // The Winner badge is a small standalone element
+        if (textLower === 'winner' || textLower === '🏆 winner' || textLower === 'winner 🏆') {
+          // Verify this is a badge-like element (small, not a heading or paragraph)
+          const rect = el.getBoundingClientRect();
+          if (rect.width < 200 && rect.height < 60) {
+            winnerBadgeFound = true;
+            // Walk up to find the parent submission card
+            let parent = el.parentElement;
+            let depth = 0;
+            while (parent && depth < 10) {
+              const parentText = (parent.textContent || '').toLowerCase();
+              // The submission card should contain media (video/img) or submission content
+              if (parent.querySelector('video, video source, img:not([class*="avatar"])')) {
+                winnerCard = parent;
+                break;
+              }
+              parent = parent.parentElement;
+              depth++;
+            }
+            break;
+          }
+        }
+      }
+
+      // Also check for "AWARDED" + "Claimed" as secondary indicators
+      let hasAwarded = false;
+      let hasClaimed = false;
+      for (const el of allElements) {
+        const text = (el.textContent || '').trim().toLowerCase();
+        if (text.includes('awarded') && (text.includes('$') || text.includes('sol'))) {
+          hasAwarded = true;
+        }
+        if (text === 'claimed' || text === '✓ claimed' || text === '✓claimed') {
+          hasClaimed = true;
+        }
+      }
+
+      // ─── Step 3: Must have BOTH winner badge AND award indicators ──
+      // If we found a winner badge but no awarded/claimed, it's still suspicious
+      if (!winnerBadgeFound) {
+        // No winner badge at all — check if bounty is at least closed
+        if (bountyStatus && bountyStatus !== 'open') {
+          // Bounty is closed but no winner found
+          return { completed: false, winner: null, reason: `Bounty status: ${bountyStatus}, but no Winner badge found` };
+        }
+        return { completed: false, winner: null, reason: 'No Winner badge found' };
+      }
+
+      // Winner badge found — extract winner details
       let winner = null;
+
       if (winnerCard) {
-        // Extract winner username
-        const userEl = winnerCard.querySelector('[class*="user"], [class*="User"], [class*="author"], [class*="submitter"], [class*="name"], [class*="Name"]');
+        // Extract winner username from the card
+        const userEl = winnerCard.querySelector('[class*="user"], [class*="User"], [class*="author"], [class*="submitter"], [class*="name"], [class*="Name"], a[href*="/profile"]');
         const username = userEl?.textContent?.trim() || '';
 
         // Extract media (prefer video over image)
-        const videoEl = winnerCard.querySelector('video, video source, [class*="video"], [class*="Video"]');
-        const imgEl = winnerCard.querySelector('img:not([class*="avatar"]):not([class*="icon"]):not([class*="logo"])');
+        const videoEl = winnerCard.querySelector('video, video source');
+        const imgEl = winnerCard.querySelector('img:not([class*="avatar"]):not([class*="icon"]):not([class*="logo"]):not([width="16"]):not([width="24"])');
 
         let mediaUrl = '';
         let mediaType = '';
         if (videoEl) {
           mediaUrl = videoEl.src || videoEl.querySelector?.('source')?.src || '';
           mediaType = 'video';
-        } else if (imgEl) {
-          mediaUrl = imgEl.src || '';
+        } else if (imgEl && imgEl.src && !imgEl.src.includes('avatar') && !imgEl.src.includes('icon')) {
+          mediaUrl = imgEl.src;
           mediaType = 'image';
         }
 
@@ -877,40 +944,20 @@ export async function checkBountyCompletion(bountyUrl, options = {}) {
         const descEl = winnerCard.querySelector('p, [class*="desc"], [class*="content"], [class*="text"]');
         const description = descEl?.textContent?.trim() || '';
 
-        winner = { username, mediaUrl, mediaType, description };
-      }
-
-      // If no specific winner card found, still look for any submission media on the page
-      if (!winner) {
-        // Look for any video/image that could be a submission
-        const anyVideo = document.querySelector('video:not([class*="hero"]), video source');
-        const anySubmissionImg = document.querySelector('[class*="submission"] img, [class*="Submission"] img');
-        
-        if (anyVideo) {
-          winner = {
-            username: '',
-            mediaUrl: anyVideo.src || anyVideo.querySelector?.('source')?.src || '',
-            mediaType: 'video',
-            description: '',
-          };
-        } else if (anySubmissionImg) {
-          winner = {
-            username: '',
-            mediaUrl: anySubmissionImg.src || '',
-            mediaType: 'image',
-            description: '',
-          };
+        if (mediaUrl) {
+          winner = { username, mediaUrl, mediaType, description };
         }
       }
 
       return {
         completed: true,
-        winner: winner && winner.mediaUrl ? winner : null,
+        winner,
+        reason: `Winner badge found${hasAwarded ? ' + Awarded' : ''}${hasClaimed ? ' + Claimed' : ''}`,
       };
     });
 
-    log.info(`📋 Completion check result for ${bountyUrl}: completed=${completionData.completed}, hasWinner=${!!completionData.winner}`);
-    return completionData;
+    log.info(`📋 Completion check for ${bountyUrl}: completed=${completionData.completed}, hasWinner=${!!completionData.winner}, reason="${completionData.reason || ''}"`);
+    return { completed: completionData.completed, winner: completionData.winner };
 
   } catch (error) {
     log.error(`Completion check failed for ${bountyUrl}: ${error.message}`);
