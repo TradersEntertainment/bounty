@@ -82,7 +82,7 @@ are you really gonna let someone else take this?
 
 #PumpFunGO #Solana`,
 
-    (b) => `we don't talk enough about the bags on @PumpFunGO
+    (b) => `we don't talk enough about the bags on @pumpfun go
 
 "${b.title}" — ${b.reward}
 
@@ -112,7 +112,7 @@ tag someone who'd actually do this
 
 i— 😭
 
-@PumpFunGO is different
+@pumpfun go is different
 
 #PumpFunGO #Solana`,
 
@@ -124,7 +124,7 @@ this is absolutely unhinged and i'm here for it 🍿
 
 #PumpFunGO #Solana`,
 
-    (b) => `every day @PumpFunGO gets wilder
+    (b) => `every day @pumpfun go gets wilder
 
 "${b.title}" for ${b.reward}
 
@@ -176,7 +176,7 @@ go get that bread 🍞
 
 #PumpFunGO #Solana`,
 
-    (b) => `if you're not checking @PumpFunGO you're leaving money on the table
+    (b) => `if you're not checking @pumpfun go you're leaving money on the table
 
 "${b.title}" — ${b.reward}
 
@@ -194,7 +194,7 @@ this is free money anon 👀
 
     (b) => `"${b.title}"
 
-${b.reward} reward on @PumpFunGO
+${b.reward} reward on @pumpfun go
 
 who's on it?
 
@@ -215,11 +215,11 @@ who's on it?
 🤪 Most absurd: "${data.mostAbsurd}"
 📈 Avg viral score: ${data.avgScore}/100
 
-@PumpFunGO never sleeps 🫡
+@pumpfun go never sleeps 🫡
 
 #PumpFunGO #Solana #DailyRecap`,
 
-    (data) => `today's @PumpFunGO roundup is wild 🔥
+    (data) => `today's @pumpfun go roundup is wild 🔥
 
 📌 ${data.totalBounties} bounties tracked
 💰 Top reward: ${data.biggestReward}
@@ -251,7 +251,7 @@ ${b.reward} — claimed ✅
 
     (b) => `another bag secured 💰
 
-${b.reward} earned on @PumpFunGO
+${b.reward} earned on @pumpfun go
 
 this is proof people are actually getting paid 🫡
 
@@ -261,7 +261,7 @@ this is proof people are actually getting paid 🫡
 
 ${b.reward} collected. just like that.
 
-@PumpFunGO hits different
+@pumpfun go hits different
 
 #PumpFunGO #Solana`,
 
@@ -269,7 +269,7 @@ ${b.reward} collected. just like that.
 
 from a bounty we posted about 👆
 
-degens stay winning on @PumpFunGO
+degens stay winning on @pumpfun go
 
 #PumpFunGO #Solana`,
   ],
@@ -387,7 +387,7 @@ export function generateThread(bounty, scores) {
 
   // Varied hook openers for tweet 1
   const hooks = [
-    `🚨 ${data.reward} bounty just dropped on @PumpFunGO
+    `🚨 ${data.reward} bounty just dropped on @pumpfun go
 
 "${data.title}"
 
@@ -435,7 +435,7 @@ ${data.reward} on the line. dead serious. 💰
 
 check it out here: ${data.url}
 
-@PumpFunGO is where degens become legends 🫡
+@pumpfun go is where degens become legends 🫡
 
 #PumpFunGO #Solana`;
 

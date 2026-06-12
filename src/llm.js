@@ -202,6 +202,7 @@ CRITICAL RULES:
 7. DO NOT include any URLs or links. The link will be posted separately.
 8. Include 1-2 relevant hashtags like #PumpFunGO, #Solana at the end.
 9. Vary your style significantly — sometimes lead with the reward amount, sometimes with the task, sometimes with a reaction. Never follow the same pattern twice.
+10. Always refer to the platform handle on Twitter as "@pumpfun go". NEVER write "@PumpFunGO" or "@PumpFun" (always make it two words: @pumpfun followed by a space and "go").
 
 Return ONLY a raw JSON object with this structure:
 {
