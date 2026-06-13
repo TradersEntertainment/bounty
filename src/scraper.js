@@ -323,10 +323,10 @@ async function extractFromDOM(page, baseUrl) {
 
       // Strategy: find card-like containers
       const cardSelectors = [
+        'article',
         '[data-testid*="bounty"]',
         '[class*="bounty-card"], [class*="bountyCard"], [class*="BountyCard"]',
         '[class*="card"], [class*="Card"]',
-        'article',
         '[role="listitem"]',
         // Generic: divs with specific structure inside a grid/list
         'main div > div > div',
@@ -982,4 +982,81 @@ export async function debugScreenshot(page, name = 'debug') {
     log.error(`Screenshot failed: ${error.message}`);
     return null;
   }
+}
+
+/**
+ * Scrape description and deliverables for a list of bounty URLs.
+ *
+ * @param {string[]} bountyUrls - Array of bounty detail URLs
+ * @param {Object} options - Scraper options
+ * @returns {Promise<Object>} Map of bountyUrl -> { description, deliverables }
+ */
+export async function scrapeBountyDetails(bountyUrls, options = {}) {
+  if (!bountyUrls || bountyUrls.length === 0) return {};
+
+  const config = { ...DEFAULT_CONFIG, ...options };
+  let browser, context;
+  const results = {};
+
+  try {
+    ({ browser, context } = await createBrowser(config));
+    const page = await context.newPage();
+
+    for (const url of bountyUrls) {
+      try {
+        log.info(`🔍 Fetching details: ${url}`);
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: config.timeout });
+        await page.waitForTimeout(2000);
+
+        // Dismiss modals/popups
+        const dismissButtons = [
+          'button:has-text("Continue")',
+          'button:has-text("Get started")',
+          'button:has-text("Accept")',
+          'button:has-text("Agree")',
+        ];
+        for (const selector of dismissButtons) {
+          try {
+            const btn = await page.$(selector);
+            if (btn) {
+              await btn.click();
+              await page.waitForTimeout(500);
+            }
+          } catch { /* ignore */ }
+        }
+
+        const details = await page.evaluate(() => {
+          const divs = Array.from(document.querySelectorAll('div, span, p, h1, h2, h3, h4, h5, h6'));
+          
+          const descHeader = divs.find(el => el.textContent.trim() === 'Description');
+          let description = '';
+          if (descHeader && descHeader.nextElementSibling) {
+            description = descHeader.nextElementSibling.textContent.trim();
+          }
+
+          const delivHeader = divs.find(el => el.textContent.trim() === 'Deliverables');
+          let deliverables = '';
+          if (delivHeader && delivHeader.nextElementSibling) {
+            deliverables = delivHeader.nextElementSibling.textContent.trim();
+          }
+
+          return { description, deliverables };
+        });
+
+        results[url] = details;
+        log.info(`✅ Details enriched for ${url}: descLength=${details.description.length}, delivLength=${details.deliverables.length}`);
+      } catch (err) {
+        log.error(`Failed to scrape details for ${url}: ${err.message}`);
+        results[url] = { description: '', deliverables: '' };
+      }
+    }
+  } catch (error) {
+    log.error(`Browser launch failed in scrapeBountyDetails: ${error.message}`);
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+  }
+
+  return results;
 }

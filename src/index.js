@@ -24,7 +24,7 @@ import cron from 'node-cron';
 import { createLogger } from './logger.js';
 import {
   initDatabase, getDb, closeDatabase,
-  upsertBounty, upsertSubmission, upsertScore,
+  upsertBounty, upsertSubmission, upsertScore, getBounty,
   getUnscoredBounties, getUndraftedBounties, getDraftTweets,
   getActiveBounties, getRecentBounties, getTopScoredBounties,
   saveTweetDraft, markTweetPosted, markTweetFailed,
@@ -32,7 +32,7 @@ import {
   insertCompletion, getPostedBountiesForCompletionCheck,
   getUnpostedCompletions, markCompletionPosted,
 } from './database.js';
-import { scrapeBounties, scrapeSubmissions, scrapeAll, checkBountyCompletion } from './scraper.js';
+import { scrapeBounties, scrapeSubmissions, scrapeAll, checkBountyCompletion, scrapeBountyDetails } from './scraper.js';
 import { scoreBounty, categorizeBounty, formatScoreSummary } from './scorer.js';
 import { generateTweet, generateRecapTweet, generateThread, generateSuccessStoryTweet } from './templates.js';
 import { filterBounty, filterTweet, getFilterStats } from './filter.js';
@@ -94,6 +94,32 @@ async function cmdScan(flags) {
     }
   } catch (err) {
     log.warn(`Failed to fetch SOL price, using fallback $${solPrice}: ${err.message}`);
+  }
+
+  // Enrich details (description & deliverables) for new or description-less bounties
+  const bountiesToEnrich = [];
+  for (const bounty of bounties) {
+    const existing = getBounty(bounty.id);
+    if (!existing || !existing.description || existing.description.trim() === '') {
+      bountiesToEnrich.push(bounty);
+    }
+  }
+
+  if (bountiesToEnrich.length > 0) {
+    log.info(`ℹ️ Found ${bountiesToEnrich.length} new or description-less bounties. Scraping detail pages...`);
+    const urls = bountiesToEnrich.map(b => b.sourceUrl).filter(Boolean);
+    const enrichedData = await scrapeBountyDetails(urls);
+    
+    for (const bounty of bountiesToEnrich) {
+      const details = enrichedData[bounty.sourceUrl];
+      if (details) {
+        let fullDesc = details.description || '';
+        if (details.deliverables) {
+          fullDesc = fullDesc ? `${fullDesc}\n\nDeliverables:\n${details.deliverables}` : details.deliverables;
+        }
+        bounty.description = fullDesc.trim();
+      }
+    }
   }
 
   let newCount = 0;
